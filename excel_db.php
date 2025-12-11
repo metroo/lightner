@@ -349,14 +349,15 @@ function leitner_update_result(int $id, string $result): ?array
 /**
  * گرفتن لغت‌های امروز با توجه به تنظیمات کاربر
  */
+
 function leitner_get_today_session(): array
 {
     [$spreadsheet, $sheet, $rows] = excel_load_all();
     $today    = (new DateTime('today'))->format('Y-m-d');
     $settings = settings_get();
 
-    $newLimit     = (int) $settings['new_limit'];     // پیش‌فرض 50
-    $sessionLimit = (int) $settings['session_limit']; // پیش‌فرض 10
+    $newLimit     = (int) $settings['new_limit'];     // مثلا 10
+    $sessionLimit = (int) $settings['session_limit']; // مثلا 2
 
     $reviewCards = [];
     $newPool     = [];
@@ -392,17 +393,24 @@ function leitner_get_today_session(): array
 
     usort($newPool, fn($a, $b) => $a['id'] <=> $b['id']);
 
-    $newN  = array_slice($newPool, 0, $newLimit);
-    $new10 = array_slice($newN, 0, $sessionLimit);
+    // بسته امروز از خانه صفر (مثلا 10 لغت)
+    $newPack = array_slice($newPool, 0, $newLimit);
+
+    // برای سازگاری با قبل، هنوز new_cards را هم برمی‌گردانیم (فقط دسته اول)
+    $firstChunk = array_slice($newPack, 0, $sessionLimit);
 
     return [
         'today'          => $today,
         'review_cards'   => $reviewCards,
-        'new_cards'      => $new10,
+        'new_pack'       => $newPack,         // تمام بسته امروز
+        'new_cards'      => $firstChunk,      // فقط دسته اول (دیگر در JS به آن وابسته نمی‌شویم)
         'total_new_box0' => count($newPool),
-        'total_new_N'    => count($newN),
+        'total_new_N'    => count($newPack),  // اندازه واقعی بسته امروز
+        'session_limit'  => $sessionLimit,    // سایز هر دسته
     ];
 }
+
+
 
 /**
  * جستجو

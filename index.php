@@ -342,7 +342,7 @@ header('Content-Type: text/html; charset=utf-8');
 
 <div class="container py-3">
     <div class="d-flex justify-content-between align-items-center mb-3">
-        <h1 class="h4 mb-0">جعبه لایتنر لغات با Excel</h1>
+        <h1 class="h4 mb-0">جعبه لایتنر</h1>
         <div>
             <a href="index.php?download=excel" class="btn btn-sm btn-outline-secondary me-2">
                 دانلود Excel
@@ -356,24 +356,24 @@ header('Content-Type: text/html; charset=utf-8');
     <ul class="nav nav-tabs" id="mainTabs" role="tablist">
         <li class="nav-item">
             <button class="nav-link active" id="tab-add-tab" data-bs-toggle="tab" data-bs-target="#tab-add" type="button" role="tab">
-                افزودن لغت
+                افزودن
             </button>
         </li>
         <li class="nav-item">
             <button class="nav-link" id="tab-session-tab" data-bs-toggle="tab" data-bs-target="#tab-session" type="button" role="tab">
-                مرور امروز (جعبه لایتنر)
+                مرور امروز  
             </button>
         </li>
         <li class="nav-item">
             <button class="nav-link" id="tab-search-tab" data-bs-toggle="tab" data-bs-target="#tab-search" type="button" role="tab">
-                جستجو / لیست همه لغات
+                جستجو
             </button>
         </li>
-        <li class="nav-item">
+        <!-- <li class="nav-item">
             <button class="nav-link" id="tab-learned-tab" data-bs-toggle="tab" data-bs-target="#tab-learned" type="button" role="tab">
                 لغات یادگرفته / بازگردانی
             </button>
-        </li>
+        </li> -->
         <li class="nav-item">
             <button class="nav-link" id="tab-settings-tab" data-bs-toggle="tab" data-bs-target="#tab-settings" type="button" role="tab">
                 تنظیمات
@@ -450,59 +450,88 @@ header('Content-Type: text/html; charset=utf-8');
         </div>
 
         <!-- Tab 2: مرور امروز -->
-        <div class="tab-pane fade" id="tab-session" role="tabpanel">
-            <div class="mt-3">
-                <button id="btn-start-session" class="btn btn-success mb-3">
-                    شروع مرور امروز
-                </button>
-                <span id="session-info" class="ms-3 text-muted small"></span>
-            </div>
+		<!-- Tab 2: مرور امروز -->
+		<div class="tab-pane fade" id="tab-session" role="tabpanel" aria-labelledby="tab-session-tab">
+			<div  >
+				<button id="btn-start-session" class="btn btn-success mb-3 mt-3">
+					شروع مرور امروز
+				</button> 
+			</div>
 
-            <div id="session-area" class="text-center" style="display:none;">
-                <p class="mb-2">
-                    وضعیت: <span id="session-stage-label" class="fw-bold"></span>
-                </p>
-                <p class="mb-2">
-                    کارت <span id="session-index">0</span> از
-                    <span id="session-total">0</span>
-                </p>
+			<!-- نوار پیشرفت بسته امروز -->
+			<div id="pack-info" class="mt-2" style="display:none;">
+				<div class="d-flex justify-content-between small mb-1">
+					<span>بسته امروز از خانه صفر</span>
+					<span>
+						مرور شده:
+						<span id="pack-done-count">0</span> /
+						<span id="pack-size">0</span> لغت
+					</span>
+				</div>
 
-                <div id="leitner-card" class="leitner-card mb-3">
-                    <div class="front">
-                        <div class="text-muted small mb-2"></div>
-                        <div id="card-front-word" class="fw-bold"></div>
-                    </div>
-                    <div class="back">
-                        <div class="text-muted small mb-2"></div>
-                        <div id="card-back-meaning"></div>
-                        <div id="card-back-example" class="ltr small"></div>
-                    </div>
-                </div>
+				<div class="progress" style="height: 20px;">
+					<div id="pack-progress-bar"
+						 class="progress-bar"
+						 role="progressbar"
+						 style="width: 0%;"
+						 aria-valuenow="0"
+						 aria-valuemin="0"
+						 aria-valuemax="100">
+						0%
+					</div>
+				</div>
 
-               <!-- <p class="small text-muted">
-                    با کلیک روی کارت، معنی/مثال نمایش داده می‌شود.
-                </p> -->
+				<div class="d-flex justify-content-between small mt-1">
+					<span>
+						اندازه هر دسته:
+						<span id="pack-session-size">0</span> لغت
+					</span>
+					<span>
+						باقی‌مانده از بسته:
+						<span id="pack-remaining">0</span> لغت
+					</span>
+				</div>
+			</div>
 
-                <div id="session-buttons-study" class="mb-3">
-                    <button id="btn-next-study" class="btn btn-primary big-btn">
-                        لغت بعدی
-                    </button>
-                </div>
+			<div id="session-area" class="text-center mt-3" style="display:none;">
+				<p class="mb-2">
+					وضعیت: <span id="session-stage-label" class="fw-bold"></span>
+				 
+					کارت <span id="session-index">0</span> از
+					<span id="session-total">0</span>
+				</p>
 
-                <div id="session-buttons-test" class="mb-3" style="display:none;">
-                    <button id="btn-wrong" class="btn btn-outline-danger big-btn me-2">
-                        بلد نیستم 
-                    </button>
-                    <button id="btn-right" class="btn btn-outline-success big-btn">
-                        بلدم 
-                    </button>
-                </div>
-            </div>
+				<div id="leitner-card" class="leitner-card mb-3">
+					<div class="front">
+ 						<div id="card-front-word" class="fw-bold"></div>
+					</div>
+					<div class="back">
+ 						<div id="card-back-meaning"></div>
+						<hr>
+						<div id="card-back-example" class="ltr small"></div>
+					</div>
+				</div>
+ 
+				<div id="session-buttons-study" class="mb-3">
+					<button id="btn-next-study" class="btn btn-primary big-btn">
+						لغت بعدی
+					</button>
+				</div>
 
-            <div id="session-done" class="alert alert-info mt-3" style="display:none;">
-                مرور امروز تمام شد.
-            </div>
-        </div>
+				<div id="session-buttons-test" class="mb-3" style="display:none;">
+					<button id="btn-wrong" class="btn btn-outline-danger big-btn me-2">
+						بلد نیستم
+					</button>
+					<button id="btn-right" class="btn btn-outline-success big-btn">
+						بلدم
+					</button>
+				</div>
+			</div>
+
+			<div id="session-done" class="alert alert-info mt-3" style="display:none;">
+				مرور امروز تمام شد.
+			</div>
+		</div>
 
         <!-- Tab 3: جستجو / لیست همه لغات -->
         <div class="tab-pane fade" id="tab-search" role="tabpanel">
@@ -631,15 +660,23 @@ header('Content-Type: text/html; charset=utf-8');
 
 <script>
     // --- State جلسه امروز ---
-    let sessionState = {
-        reviewCards: [],
-        newCards: [],
-        stage: 'idle',
-        round: 1,
-        index: 0,
-        currentList: [],
-        currentCard: null
-    };
+	let sessionState = {
+		reviewCards: [],
+		newPack: [],       // کل بسته امروز
+		stage: 'idle',     // idle | review | new-study | new-test | done
+		round: 1,
+		index: 0,
+		currentList: [],   // کلمات دسته فعلی
+		currentCard: null,
+		sessionLimit: 0,   // تعداد کلمات در هر دسته (مثلا 2)
+		chunkIndex: 0      // شماره دسته فعلی (0، 1، 2، ...)
+	};
+
+	let packInfo = {
+		size: 0,           // کل کلمات بسته امروز (new_pack.length)
+		sessionSize: 0     // تعداد هر دسته
+	};
+
 
     let searchCurrentPage = 1;
     const searchPerPage = 20;
@@ -653,6 +690,39 @@ header('Content-Type: text/html; charset=utf-8');
             setTimeout(() => el.text(''), 4000);
         }
     }
+
+	function updatePackHeader() {
+		const total = packInfo.size;        // کل لغات بسته امروز
+		const per   = packInfo.sessionSize; // تعداد هر دسته
+
+		if (!total || !per) {
+			$('#pack-info').hide();
+			return;
+		}
+
+		// تعداد لغاتی که دسته‌های قبلی آنها کاملاً تمام شده‌اند
+		// (دسته فعلی هنوز در حال مطالعه/آزمون است)
+		const doneWords = Math.min(total, sessionState.chunkIndex * per);
+		const remaining = Math.max(0, total - doneWords);
+
+		// درصد پیشرفت
+		const percent = total ? Math.round((doneWords / total) * 100) : 0;
+
+		// به‌روزرسانی اعداد
+		$('#pack-size').text(total);
+		$('#pack-session-size').text(per);
+		$('#pack-remaining').text(Math.max(0, remaining - per)); // این‌جا می‌خواهیم تعداد آن‌هایی که هنوز اصلاً نرسیده‌ایم را نشان دهیم
+		$('#pack-done-count').text(doneWords);
+
+		// به‌روزرسانی progress bar
+		const $bar = $('#pack-progress-bar');
+		$bar.css('width', percent + '%')
+			.attr('aria-valuenow', percent)
+			.text(percent + '%');
+
+		$('#pack-info').show();
+	}
+
 
     // --- افزودن لغت / جلوگیری از تکرار ---
     $('#form-add-word').on('submit', function (e) {
@@ -734,42 +804,54 @@ header('Content-Type: text/html; charset=utf-8');
     });
 
     // --- شروع جلسه امروز ---
-    $('#btn-start-session').on('click', function () {
-        $.getJSON('index.php?api=get_today', function (res) {
-            if (!res.ok) {
-                alert(res.error || 'خطا در دریافت داده‌های امروز');
-                return;
-            }
+	$('#btn-start-session').on('click', function () {
+		$.getJSON('index.php?api=get_today', function (res) {
+			if (!res.ok) {
+				alert(res.error || 'خطا در دریافت داده‌های امروز');
+				return;
+			}
+			$('#btn-start-session').hide();
 
-            const ses = res.session;
-            sessionState.reviewCards = ses.review_cards || [];
-            sessionState.newCards = ses.new_cards || [];
-            sessionState.stage = 'idle';
-            sessionState.round = 1;
-            sessionState.index = 0;
-            sessionState.currentList = [];
-            sessionState.currentCard = null;
 
-            let info = 'تاریخ امروز: ' + ses.today +
-                ' | کارت‌های مرور: ' + sessionState.reviewCards.length +
-                ' | لغت جدید در دسترس (box0): ' + ses.total_new_box0 +
-                ' | امروز از جدیدها: ' + sessionState.newCards.length;
-            $('#session-info').text(info);
+			const ses = res.session;
 
-            $('#session-done').hide();
-            $('#session-area').show();
+			sessionState.reviewCards = ses.review_cards || [];
+			sessionState.newPack     = ses.new_pack || [];
+			sessionState.sessionLimit = ses.session_limit || (ses.new_pack ? ses.new_pack.length : 0);
+			sessionState.stage       = 'idle';
+			sessionState.round       = 1;
+			sessionState.index       = 0;
+			sessionState.currentList = [];
+			sessionState.currentCard = null;
+			sessionState.chunkIndex  = 0;
 
-            if (sessionState.reviewCards.length > 0) {
-                startReviewStage();
-            } else if (sessionState.newCards.length > 0) {
-                startNewStudyStage();
-            } else {
-                $('#session-area').hide();
-                $('#session-done').show().text('امروز کارتی برای مرور وجود ندارد.');
-            }
-        });
-    });
+			packInfo.size        = sessionState.newPack.length;
+			packInfo.sessionSize = sessionState.sessionLimit;
 
+			let info = 'تاریخ امروز: ' + ses.today +
+				' | کارت‌های مرور: ' + sessionState.reviewCards.length +
+				' | لغت جدید در دسترس (box0): ' + ses.total_new_box0 +
+				' | بسته امروز از خانه صفر: ' + packInfo.size +
+				' | اندازه هر دسته: ' + packInfo.sessionSize;
+			//$('#session-info').text(info);
+
+			updatePackHeader();
+
+			$('#session-done').hide();
+			$('#session-area').show();	
+
+			if (sessionState.reviewCards.length > 0) {
+				startReviewStage();
+			} else if (sessionState.newPack.length > 0) {
+				startNewStudyStage();
+			} else {
+				$('#session-area').hide();
+				$('#session-done').show().text('امروز کارتی برای مرور وجود ندارد.');
+			}
+		});
+	});
+
+   
     function updateCardView() {
         const idx = sessionState.index + 1;
         $('#session-index').text(idx);
@@ -789,6 +871,42 @@ header('Content-Type: text/html; charset=utf-8');
         $('#leitner-card').removeClass('flipped');
     }
 
+	function enableLongPressCopy() {
+		const el = document.getElementById('card-front-word');
+
+		let pressTimer;
+
+		// شروع نگه داشتن (موس یا لمس)
+		const startPress = function () {
+			pressTimer = setTimeout(() => {
+				const text = el.innerText.trim();
+				if (text.length > 0) {
+					navigator.clipboard.writeText(text)
+						.then(() => {
+							showTempToast('لغت کپی شد: ' + text);
+						});
+				}
+			}, 600); // زمان لانگ‌پرس بر حسب میلی‌ثانیه
+		};
+
+		// رها کردن (لغو لانگ‌پرس)
+		const cancelPress = function () {
+			clearTimeout(pressTimer);
+		};
+
+		// دسکتاپ
+		el.addEventListener('mousedown', startPress);
+		el.addEventListener('mouseup', cancelPress);
+		el.addEventListener('mouseleave', cancelPress);
+
+		// موبایل
+		el.addEventListener('touchstart', startPress);
+		el.addEventListener('touchend', cancelPress);
+		el.addEventListener('touchmove', cancelPress);
+		el.addEventListener('touchcancel', cancelPress);
+	}
+
+
     function setStageLabel(text) {
         $('#session-stage-label').text(text);
     }
@@ -803,67 +921,136 @@ header('Content-Type: text/html; charset=utf-8');
         loadCurrentCard();
     }
 
-    function startNewStudyStage() {
-        if (!sessionState.newCards.length) {
-            startNewTestStage();
-            return;
-        }
-        sessionState.stage = 'new-study';
-        sessionState.currentList = sessionState.newCards.slice();
-        sessionState.index = 0;
-        sessionState.round = 1;
-        setStageLabel('مرحله مطالعه (دور ' + sessionState.round + ' از 3) برای لغات جدید');
-        $('#session-buttons-study').show();
-        $('#session-buttons-test').hide();
-        loadCurrentCard();
-    }
+	function startNewStudyStage() {
+		const total = sessionState.newPack.length;
+		const per   = sessionState.sessionLimit;
 
-    function startNewTestStage() {
-        if (!sessionState.newCards.length) {
-            sessionFinished();
-            return;
-        }
-        sessionState.stage = 'new-test';
-        sessionState.currentList = sessionState.newCards.slice();
-        sessionState.index = 0;
-        setStageLabel('مرحله پرسش از لغات جدید (بلدم = خانه 1، بلد نیستم = ماندن در خانه 0)');
-        $('#session-buttons-study').hide();
-        $('#session-buttons-test').show();
-        loadCurrentCard();
-    }
+		if (!total || !per) {
+			sessionFinished();
+			return;
+		}
 
-    function sessionFinished() {
-        sessionState.stage = 'done';
-        $('#session-area').hide();
-        $('#session-done').show().text('مرور امروز تمام شد.');
-    }
+		const start = sessionState.chunkIndex * per;
+		const end   = start + per;
+		const chunk = sessionState.newPack.slice(start, end);
 
-    function loadCurrentCard() {
-        if (sessionState.index >= sessionState.currentList.length) {
-            if (sessionState.stage === 'review') {
-                if (sessionState.newCards.length > 0) {
-                    startNewStudyStage();
-                } else {
-                    sessionFinished();
-                }
-            } else if (sessionState.stage === 'new-study') {
-                if (sessionState.round < 3) {
-                    sessionState.round++;
-                    sessionState.index = 0;
-                    setStageLabel('مرحله مطالعه (دور ' + sessionState.round + ' از 3) برای لغات جدید');
-                    loadCurrentCard();
-                } else {
-                    startNewTestStage();
-                }
-            } else if (sessionState.stage === 'new-test') {
-                sessionFinished();
-            }
-            return;
-        }
+		if (!chunk.length) {
+			// بسته تمام شده
+			sessionFinished();
+			return;
+		}
 
-        sessionState.currentCard = sessionState.currentList[sessionState.index];
-        updateCardView();
-    }
+		sessionState.stage       = 'new-study';
+		sessionState.currentList = chunk;
+		sessionState.index       = 0;
+		sessionState.round       = 1;
+
+		setStageLabel('مرحله مطالعه (دور ' + sessionState.round + ' از 3)   ' );
+		$('#session-buttons-study').show();
+		$('#session-buttons-test').hide();
+
+		updatePackHeader();
+		loadCurrentCard();
+	}
+
+
+
+	function startNewTestStage() {
+		if (!sessionState.currentList.length) {
+			sessionFinished();
+			return;
+		}
+
+		sessionState.stage = 'new-test';
+		sessionState.index = 0;
+
+		setStageLabel('مرحله پرسش از دسته شماره ' + (sessionState.chunkIndex + 1) + ' (بلدم = خانه 1، بلد نیستم = ماندن در خانه 0)');
+		$('#session-buttons-study').hide();
+		$('#session-buttons-test').show();
+		loadCurrentCard();
+	}
+
+
+	function sessionFinished() {
+		// اگر کل بسته را تمام کرده‌ایم، progress را 100٪ کن
+		if (packInfo.size && sessionState.newPack.length) {
+			// اگر chunkIndex * per >= total یعنی همه تمام شده
+			const total = packInfo.size;
+			const per   = packInfo.sessionSize;
+			const doneWords = Math.min(total, sessionState.chunkIndex * per);
+			if (doneWords >= total) {
+				$('#pack-done-count').text(total);
+				$('#pack-remaining').text(0);
+				const $bar = $('#pack-progress-bar');
+				$bar.css('width', '100%')
+					.attr('aria-valuenow', 100)
+					.text('100%');
+			}
+		}
+
+		sessionState.stage = 'done';
+		$('#session-area').hide();
+		$('#session-done').show().text('مرور امروز تمام شد.');
+		 $('#btn-start-session').show();
+	}
+
+
+	function loadCurrentCard() {
+		// اگر به آخر دسته فعلی رسیدیم
+		if (sessionState.index >= sessionState.currentList.length) {
+
+			if (sessionState.stage === 'review') {
+				// بعد از مرور قدیمی‌ها، اگر بسته جدید داریم برویم سراغ دسته اول
+				if (sessionState.newPack.length > 0) {
+					startNewStudyStage();
+				} else {
+					sessionFinished();
+				}
+				return;
+			}
+
+			if (sessionState.stage === 'new-study') {
+				// سه دور مطالعه برای همین دسته
+				if (sessionState.round < 3) {
+					sessionState.round++;
+					sessionState.index = 0;
+					setStageLabel('مرحله مطالعه (دور ' + sessionState.round + ' از 3) '  );
+					loadCurrentCard();
+				} else {
+					// بعد از دور سوم، تست روی همین دسته
+					startNewTestStage();
+				}
+				return;
+			}
+
+			if (sessionState.stage === 'new-test') {
+				const total = sessionState.newPack.length;
+				const per   = sessionState.sessionLimit;
+				const nextStart = (sessionState.chunkIndex + 1) * per;
+
+				if (nextStart < total) {
+					// برو به دسته بعد
+					sessionState.chunkIndex++;
+					updatePackHeader();       // ← تعداد مرور شده و باقی‌مانده را به‌روزرسانی می‌کند
+					startNewStudyStage();
+				} else {
+					// بسته تمام شده
+					sessionFinished();
+				}
+				return;
+			}
+
+
+			// در سایر حالت‌ها
+			sessionFinished();
+			return;
+		}
+
+		// اگر هنوز در وسط دسته هستیم، کارت فعلی را لود کن
+		sessionState.currentCard = sessionState.currentList[sessionState.index];
+		updateCardView();
+	}
+
 
     $('#leitner-card').on('click', function () {
         $(this).toggleClass('flipped');
@@ -904,76 +1091,76 @@ header('Content-Type: text/html; charset=utf-8');
 
     // --- جستجو / لیست همه لغات با صفحه‌بندی ---
     function renderSearchTable(items) {
-    const tbody = $('#tbl-search-results tbody');
-    tbody.empty();
+		const tbody = $('#tbl-search-results tbody');
+		tbody.empty();
 
-    items.forEach(function (item) {
-        const tr = $('<tr>');
+		items.forEach(function (item) {
+			const tr = $('<tr>');
 
-        tr.append('<td>' + item.id + '</td>');
-        tr.append('<td>' + $('<div>').text(item.word).html() + '</td>');
-        tr.append('<td>' + $('<div>').text(item.meaning).html() + '</td>');
-        tr.append('<td class="ltr small">' + $('<div>').text(item.example || '').html() + '</td>');
-        tr.append('<td>' + item.box + '</td>');
-        tr.append('<td>' + item.status + '</td>');
-        tr.append('<td>' + (item.next_review || '') + '</td>');
+			tr.append('<td>' + item.id + '</td>');
+			tr.append('<td>' + $('<div>').text(item.word).html() + '</td>');
+			tr.append('<td>' + $('<div>').text(item.meaning).html() + '</td>');
+			tr.append('<td class="ltr small">' + $('<div>').text(item.example || '').html() + '</td>');
+			tr.append('<td>' + item.box + '</td>');
+			tr.append('<td>' + item.status + '</td>');
+			tr.append('<td>' + (item.next_review || '') + '</td>');
 
-        // ستون عملیات
-        const tdActions = $('<td>');
+			// ستون عملیات
+			const tdActions = $('<td>');
 
-        // دکمه ویرایش
-        const btnEdit = $('<button class="btn btn-sm btn-outline-warning me-1">ویرایش</button>');
-        btnEdit.on('click', function () {
-            // رفتن به تب افزودن لغت
-            const tabTrigger = document.querySelector('#tab-add-tab');
-            if (tabTrigger && window.bootstrap) {
-                const tab = new bootstrap.Tab(tabTrigger);
-                tab.show();
-            }
+			// دکمه ویرایش
+			const btnEdit = $('<button class="btn btn-sm btn-outline-warning me-1">ویرایش</button>');
+			btnEdit.on('click', function () {
+				// رفتن به تب افزودن لغت
+				const tabTrigger = document.querySelector('#tab-add-tab');
+				if (tabTrigger && window.bootstrap) {
+					const tab = new bootstrap.Tab(tabTrigger);
+					tab.show();
+				}
 
-            // پر کردن فرم با داده‌های رکورد
-            $('#edit-id').val(item.id);
-            $('input[name="word"]').val(item.word);
-            $('textarea[name="meaning"]').val(item.meaning || '');
-            $('textarea[name="example"]').val(item.example || '');
+				// پر کردن فرم با داده‌های رکورد
+				$('#edit-id').val(item.id);
+				$('input[name="word"]').val(item.word);
+				$('textarea[name="meaning"]').val(item.meaning || '');
+				$('textarea[name="example"]').val(item.example || '');
 
-            // دکمه آپدیت را نشان بده
-            $('#btn-update-word').show();
+				// دکمه آپدیت را نشان بده
+				$('#btn-update-word').show();
 
-            // فوکوس روی لغت
-            $('input[name="word"]').focus().select();
+				// فوکوس روی لغت
+				$('input[name="word"]').focus().select();
 
-            // اسکرول به بالای صفحه
-            $('html, body').animate({scrollTop: 0}, 300);
-        });
+				// اسکرول به بالای صفحه
+				$('html, body').animate({scrollTop: 0}, 300);
+			});
 
-        // دکمه حذف (اگر قبلاً اضافه کرده‌ای)
-        const btnDelete = $('<button class="btn btn-sm btn-outline-danger">حذف</button>');
-        btnDelete.on('click', function () {
-            if (!confirm('آیا از حذف این لغت مطمئن هستید؟')) {
-                return;
-            }
-            $.post('index.php?api=delete_word', {id: item.id}, function (res) {
-                if (!res.ok) {
-                    alert(res.error || 'خطا در حذف لغت');
-                    return;
-                }
+			// دکمه حذف (اگر قبلاً اضافه کرده‌ای)
+			const btnDelete = $('<button class="btn btn-sm btn-outline-danger">حذف</button>');
+			btnDelete.on('click', function () {
+				if (!confirm('آیا از حذف این لغت مطمئن هستید؟')) {
+					return;
+				}
+				$.post('index.php?api=delete_word', {id: item.id}, function (res) {
+					if (!res.ok) {
+						alert(res.error || 'خطا در حذف لغت');
+						return;
+					}
 
-                const q = $('#form-search input[name="q"]').val().trim();
-                if (q === '') {
-                    loadWordPage(searchCurrentPage);
-                } else {
-                    $('#form-search').submit();
-                }
-            }, 'json');
-        });
+					const q = $('#form-search input[name="q"]').val().trim();
+					if (q === '') {
+						loadWordPage(searchCurrentPage);
+					} else {
+						$('#form-search').submit();
+					}
+				}, 'json');
+			});
 
-        tdActions.append(btnEdit).append(btnDelete);
-        tr.append(tdActions);
+			tdActions.append(btnEdit).append(btnDelete);
+			tr.append(tdActions);
 
-        tbody.append(tr);
-    });
-}
+			tbody.append(tr);
+		});
+	}
 
 
 
@@ -1162,6 +1349,31 @@ header('Content-Type: text/html; charset=utf-8');
     $(function () {
         // هیچ کار اجباری در load اولیه نمی‌کنیم تا سبک بماند
     });
+	
+	function showTempToast(msg) {
+		let toast = document.createElement('div');
+		toast.className = 'toast-copy-msg';
+		toast.innerText = msg;
+
+		document.body.appendChild(toast);
+
+		setTimeout(() => {
+			toast.classList.add('show');
+		}, 10);
+
+		setTimeout(() => {
+			toast.classList.remove('show');
+			setTimeout(() => toast.remove(), 300);
+		}, 1500);
+	}
+
+
+	
+	$(document).ready(function () {
+		enableLongPressCopy();
+	});
+
+
 </script>
 
 </body>
