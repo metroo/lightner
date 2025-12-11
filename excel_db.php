@@ -200,50 +200,71 @@ function excel_update_word(int $id, string $word, string $meaning, string $examp
     return null;
 }
 
+
 /**
  * ورود گروهی از فایل Excel آپلودی:
- * انتظار دارد ستون‌ها: word, meaning, example (یا A,B,C)
+ * ستون‌ها: A = word, B = meaning, C = example
+ * - از ثبت لغات تکراری در بانک موجود جلوگیری می‌کند
+ * - از ثبت لغات تکراری داخل همان فایل ایمپورت هم جلوگیری می‌کند
  */
 function excel_import_from_file(string $tmpFilePath): int
 {
+    // فایل اصلی لغات
     [$mainSpreadsheet, $mainSheet, $rows] = excel_load_all();
 
+    // فایل ایمپورت
     $importSpreadsheet = IOFactory::load($tmpFilePath);
     $importSheet       = $importSpreadsheet->getActiveSheet();
     $highestRow        = $importSheet->getHighestDataRow();
 
-    // پیدا کردن بیشترین id موجود
-    $maxId = 0;
+    // 1) لیست لغات موجود در بانک (برای جلوگیری از تکراری با دیتا‌ی قبلی)
+    $existingWords = []; // key = mb_strtolower(trim(word))
+    $maxId         = 0;
+
     foreach ($rows as $r) {
+        $w = trim((string) $r['word']);
+        if ($w !== '') {
+            $key = mb_strtolower($w, 'UTF-8');
+            $existingWords[$key] = true;
+        }
         if ($r['id'] > $maxId) {
             $maxId = $r['id'];
         }
     }
 
-    $inserted   = 0;
-    $targetRow  = $mainSheet->getHighestDataRow() + 1;
-    $today      = (new DateTime('today'))->format('Y-m-d');
+    $inserted  = 0;
+    $targetRow = $mainSheet->getHighestDataRow() + 1;
+    $today     = (new DateTime('today'))->format('Y-m-d');
 
+    // 2) حلقه روی سطرهای فایل ایمپورت
     for ($row = 2; $row <= $highestRow; $row++) {
         $word    = trim((string) $importSheet->getCell("A{$row}")->getValue());
         $meaning = trim((string) $importSheet->getCell("B{$row}")->getValue());
         $example = trim((string) $importSheet->getCell("C{$row}")->getValue());
 
+        // اگر لغت یا معنی خالی است، رد شو
         if ($word === '' || $meaning === '') {
             continue;
         }
 
-        // جلوگیری از ایمپورت لغت تکراری
-        if (excel_find_by_word($word) !== null) {
+        // کلید یکتا برای چک تکراری (حساس نبودن به حروف بزرگ/کوچک)
+        $key = mb_strtolower($word, 'UTF-8');
+
+        // اگر قبلاً (در بانک اصلی یا همین ایمپورت) این لغت ثبت شده، رد شو
+        if (isset($existingWords[$key])) {
             continue;
         }
 
+        // از این به بعد این لغت را ثبت‌شده در نظر بگیر
+        $existingWords[$key] = true;
+
+        // درج در فایل اصلی
         $maxId++;
         $mainSheet->setCellValue("A{$targetRow}", $maxId);
         $mainSheet->setCellValue("B{$targetRow}", $word);
         $mainSheet->setCellValue("C{$targetRow}", $meaning);
         $mainSheet->setCellValue("D{$targetRow}", $example);
-        $mainSheet->setCellValue("E{$targetRow}", 0);          // box 0
+        $mainSheet->setCellValue("E{$targetRow}", 0);          // box 0 (جدید)
         $mainSheet->setCellValue("F{$targetRow}", 'active');
         $mainSheet->setCellValue("G{$targetRow}", $today);
         $mainSheet->setCellValue("H{$targetRow}", '');
@@ -254,9 +275,12 @@ function excel_import_from_file(string $tmpFilePath): int
         $inserted++;
     }
 
+    // در پایان یک‌بار ذخیره
     excel_save($mainSpreadsheet);
+
     return $inserted;
 }
+
 
 /**
  * بر اساس توضیحات شما:

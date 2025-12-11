@@ -242,6 +242,29 @@ if (!$loggedIn) {
             rel="stylesheet"
             href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.rtl.min.css"
         >
+		<style>
+.toast-copy-msg {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #333;
+    color: #fff;
+    padding: 8px 18px;
+    border-radius: 6px;
+    opacity: 0;
+    transition: all .3s ease;
+    z-index: 9999;
+    font-size: 0.9rem;
+}
+.toast-copy-msg.show {
+    opacity: 1;
+    bottom: 35px;
+}
+
+</style>
+
+
     </head>
     <body class="bg-light">
     <div class="container d-flex align-items-center justify-content-center" style="min-height:100vh;">
@@ -551,14 +574,13 @@ header('Content-Type: text/html; charset=utf-8');
                         <button type="submit" class="btn btn-primary">
                             جستجو
                         </button>
-                    </div>
-                    <div class="col-12 mt-2">
-                        <small class="text-muted">
-                            وقتی فیلد جستجو خالی است، لیست همه لغات به صورت صفحه‌بندی نمایش داده می‌شود.
-                        </small>
-                    </div>
+                    </div> 
                 </form>
             </div>
+			
+			<div class="mt-2">
+				<span id="search-total-words" class="small text-muted"></span>
+			</div>
 
             <div class="table-responsive mt-3">
                 <table class="table table-striped table-sm align-middle" id="tbl-search-results">
@@ -782,26 +804,45 @@ header('Content-Type: text/html; charset=utf-8');
     });
 
     // --- ایمپورت Excel ---
-    $('#form-import-excel').on('submit', function (e) {
-        e.preventDefault();
-        const formData = new FormData(this);
-        $.ajax({
-            url: 'index.php?api=import_excel',
-            type: 'POST',
-            data: formData,
-            processData: false,
-            contentType: false,
-            dataType: 'json',
-            success: function (res) {
-                if (res.ok) {
-                    showMessage('#import-msg', res.inserted + ' لغت جدید (غیرتکراری) اضافه شد.');
-                    $('#form-import-excel')[0].reset();
-                } else {
-                    showMessage('#import-msg', res.error || 'خطا در ایمپورت.', true);
-                }
+  $('#form-import-excel').on('submit', function (e) {
+    e.preventDefault();
+
+    const form = this;
+    const formData = new FormData(form);
+
+    const $btn = $('#form-import-excel button[type="submit"]');
+    const originalText = $btn.text();
+
+    $btn.prop('disabled', true).text('در حال ارسال...');
+
+    $.ajax({
+        url: 'index.php?api=import_excel',
+        type: 'POST',
+        data: formData,
+        processData: false,
+        contentType: false,
+        dataType: 'json',
+        success: function (res) {
+            $btn.prop('disabled', false).text(originalText);
+
+            if (res.ok) {
+                $('#form-import-excel')[0].reset();
+                $('#import-msg').text('');
+ 
+                showToast(res.inserted + ' لغت جدید (غیرتکراری) اضافه شد.', 'success');
+            } else {
+                const msg = res.error || 'خطا در ایمپورت.';
+                showMessage('#import-msg', msg, true);
+                showToast('ایمپورت با خطا مواجه شد.', 'danger');
             }
-        });
+        },
+        error: function () {
+            $btn.prop('disabled', false).text(originalText);
+            showMessage('#import-msg', 'خطا در ارتباط با سرور.', true);
+            showToast('خطا در ارتباط با سرور.', 'danger');
+        }
     });
+});
 
     // --- شروع جلسه امروز ---
 	$('#btn-start-session').on('click', function () {
@@ -871,40 +912,7 @@ header('Content-Type: text/html; charset=utf-8');
         $('#leitner-card').removeClass('flipped');
     }
 
-	function enableLongPressCopy() {
-		const el = document.getElementById('card-front-word');
-
-		let pressTimer;
-
-		// شروع نگه داشتن (موس یا لمس)
-		const startPress = function () {
-			pressTimer = setTimeout(() => {
-				const text = el.innerText.trim();
-				if (text.length > 0) {
-					navigator.clipboard.writeText(text)
-						.then(() => {
-							showTempToast('لغت کپی شد: ' + text);
-						});
-				}
-			}, 600); // زمان لانگ‌پرس بر حسب میلی‌ثانیه
-		};
-
-		// رها کردن (لغو لانگ‌پرس)
-		const cancelPress = function () {
-			clearTimeout(pressTimer);
-		};
-
-		// دسکتاپ
-		el.addEventListener('mousedown', startPress);
-		el.addEventListener('mouseup', cancelPress);
-		el.addEventListener('mouseleave', cancelPress);
-
-		// موبایل
-		el.addEventListener('touchstart', startPress);
-		el.addEventListener('touchend', cancelPress);
-		el.addEventListener('touchmove', cancelPress);
-		el.addEventListener('touchcancel', cancelPress);
-	}
+	 
 
 
     function setStageLabel(text) {
@@ -1214,17 +1222,22 @@ header('Content-Type: text/html; charset=utf-8');
         addPageItem(page + 1, 'بعدی', page === totalPages, false);
     }
 
-    function loadWordPage(page) {
-        $.getJSON('index.php?api=list_words', {page: page, per_page: searchPerPage}, function (res) {
-            if (!res.ok) {
-                alert(res.error || 'خطا در لیست لغات');
-                return;
-            }
-            searchCurrentPage = res.page;
-            renderSearchTable(res.items);
-            renderSearchPagination(res.page, res.total_pages);
-        });
-    }
+	function loadWordPage(page) {
+		$.getJSON('index.php?api=list_words', {page: page, per_page: searchPerPage}, function (res) {
+			if (!res.ok) {
+				alert(res.error || 'خطا در لیست لغات');
+				return;
+			}
+
+			searchCurrentPage = res.page;
+			renderSearchTable(res.items);
+			renderSearchPagination(res.page, res.total_pages);
+
+			// نمایش تعداد کل لغات
+			$('#search-total-words').text('تعداد کل لغات ثبت‌شده: ' + res.total + ' لغت');
+		});
+	}
+
 
     // سابمیت فرم جستجو (کلیک روی دکمه)
     $('#form-search').on('submit', function (e) {
@@ -1349,32 +1362,162 @@ header('Content-Type: text/html; charset=utf-8');
     $(function () {
         // هیچ کار اجباری در load اولیه نمی‌کنیم تا سبک بماند
     });
-	
-	function showTempToast(msg) {
-		let toast = document.createElement('div');
-		toast.className = 'toast-copy-msg';
-		toast.innerText = msg;
+ 
 
-		document.body.appendChild(toast);
 
-		setTimeout(() => {
-			toast.classList.add('show');
-		}, 10);
+	function copyTextToClipboard(text) {
+    text = (text || '').trim();
+    if (!text) return;
 
-		setTimeout(() => {
-			toast.classList.remove('show');
-			setTimeout(() => toast.remove(), 300);
-		}, 1500);
+    if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+        navigator.clipboard.writeText(text).then(function () {
+            showToast('لغت کپی شد: ' + text, 'success');
+        }).catch(function () {
+            legacyCopy(text);
+        });
+    } else {
+        legacyCopy(text);
+    }
+}
+
+function legacyCopy(text) {
+    const textarea = document.createElement('textarea');
+    textarea.value = text;
+    textarea.setAttribute('readonly', '');
+    textarea.style.position = 'fixed';
+    textarea.style.left = '-9999px';
+    document.body.appendChild(textarea);
+
+    textarea.select();
+    try {
+        document.execCommand('copy');
+        showToast('لغت کپی شد: ' + text, 'success');
+    } catch (e) {
+        console.warn('Copy failed', e);
+        showToast('کپی لغت با مشکل مواجه شد.', 'danger');
+    }
+    document.body.removeChild(textarea);
+}
+
+
+	function legacyCopy(text) {
+		const textarea = document.createElement('textarea');
+		textarea.value = text;
+		textarea.setAttribute('readonly', '');
+		textarea.style.position = 'fixed';
+		textarea.style.left = '-9999px';
+		document.body.appendChild(textarea);
+
+		textarea.select();
+		try {
+			document.execCommand('copy');
+			showToast('لغت کپی شد: '  , 'success');
+ 		} catch (e) {
+			console.warn('Copy failed', e);
+		}
+		document.body.removeChild(textarea);
 	}
+
+ 
+
+
+	function enableLongPressCopy() {
+		const el = document.getElementById('card-front-word');
+		if (!el) return;
+
+		let pressTimer;
+
+		const startPress = function (e) {
+			// برای touch از scroll جلوگیری نکنیم
+			pressTimer = setTimeout(() => {
+				const text = el.innerText || el.textContent || '';
+				copyTextToClipboard(text);
+			}, 600); // 600ms = long press
+		};
+
+		const cancelPress = function () {
+			clearTimeout(pressTimer);
+		};
+
+		// دسکتاپ
+		el.addEventListener('mousedown', startPress);
+		el.addEventListener('mouseup', cancelPress);
+		el.addEventListener('mouseleave', cancelPress);
+
+		// موبایل
+		el.addEventListener('touchstart', startPress);
+		el.addEventListener('touchend', cancelPress);
+		el.addEventListener('touchmove', cancelPress);
+		el.addEventListener('touchcancel', cancelPress);
+	}
+
 
 
 	
 	$(document).ready(function () {
 		enableLongPressCopy();
 	});
+let appToast = null;
+
+function initAppToast() {
+    const el = document.getElementById('app-toast');
+    if (!el) return;
+    appToast = new bootstrap.Toast(el, {
+        delay: 2000  // 2 ثانیه، اگر خواستی بیشتر/کمتر کن
+    });
+}
+
+/**
+ * type می‌تواند یکی از این‌ها باشد:
+ * primary, success, danger, warning, info, secondary, dark, light
+ */
+function showToast(message, type = 'primary') {
+    const toastEl = document.getElementById('app-toast');
+    const bodyEl  = document.getElementById('app-toast-body');
+    if (!toastEl || !bodyEl) return;
+
+    bodyEl.textContent = message;
+
+    // پاک‌کردن کلاس‌های رنگ قبلی
+    toastEl.classList.remove(
+        'text-bg-primary',
+        'text-bg-success',
+        'text-bg-danger',
+        'text-bg-warning',
+        'text-bg-info',
+        'text-bg-secondary',
+        'text-bg-dark',
+        'text-bg-light'
+    );
+
+    // افزودن کلاس جدید
+    toastEl.classList.add('text-bg-' + type);
+
+    if (!appToast) {
+        appToast = new bootstrap.Toast(toastEl, {delay: 2000});
+    }
+    appToast.show();
+}
+
+// اجرا بعد از لود صفحه
+$(function () {
+    initAppToast();
+});
 
 
 </script>
+<!-- Toast Bootstrap عمومی برنامه -->
+<div class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index: 1100;">
+    <div id="app-toast" class="toast align-items-center text-bg-primary border-0" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="d-flex">
+            <div id="app-toast-body" class="toast-body">
+                پیام تست
+            </div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto"
+                    data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
+    </div>
+</div>
 
 </body>
 </html>
