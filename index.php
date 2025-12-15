@@ -442,6 +442,7 @@ header('Content-Type: text/html; charset=utf-8');
             box-shadow: 0 0.5rem 1rem rgba(0,0,0,0.08);
             cursor: pointer;
             min-height: 230px;
+            transition: transform 0.25s ease, opacity 0.25s ease;
         }
         .leitner-card .front,
         .leitner-card .back {
@@ -472,6 +473,10 @@ header('Content-Type: text/html; charset=utf-8');
             direction: ltr;
             text-align: left;
         }
+        .swipe-out-left { transform: translateX(-120%); opacity: 0; }
+        .swipe-out-right { transform: translateX(120%); opacity: 0; }
+        .swipe-in-from-left { transform: translateX(-120%); opacity: 0; }
+        .swipe-in-from-right { transform: translateX(120%); opacity: 0; }
     </style>
 </head>
 <body>
@@ -1202,6 +1207,8 @@ header('Content-Type: text/html; charset=utf-8');
     let swipeStartX = null;
     let swipeStartY = null;
     let swipeHandled = false;
+    let cardAnimating = false;
+    let cardAnimationTimer = null;
     const SWIPE_THRESHOLD = 50;
 
     $('#leitner-card').on('click', function () {
@@ -1215,12 +1222,61 @@ header('Content-Type: text/html; charset=utf-8');
     function goToNextCard() {
         sessionState.index++;
         loadCurrentCard();
+        return true;
     }
 
     function goToPrevCard() {
-        if (sessionState.index <= 0) return;
+        if (sessionState.index <= 0) return false;
         sessionState.index--;
         loadCurrentCard();
+        return true;
+    }
+
+    function animateCardNavigation(direction, changeFn) {
+        if (cardAnimating) return;
+
+        const cardEl = $('#leitner-card');
+        const outClass = direction === 'right' ? 'swipe-out-right' : 'swipe-out-left';
+        const inClass = direction === 'right' ? 'swipe-in-from-left' : 'swipe-in-from-right';
+
+        const canChange = changeFn === goToPrevCard ? (sessionState.index > 0) : true;
+        if (!canChange) return;
+
+        cardAnimating = true;
+        if (cardAnimationTimer) {
+            clearTimeout(cardAnimationTimer);
+            cardAnimationTimer = null;
+        }
+        cardEl.addClass(outClass);
+
+        const handleOut = function (evt) {
+            if (evt.target !== cardEl[0]) return;
+            cardEl.off('transitionend', handleOut);
+
+            changeFn();
+
+            cardEl.removeClass(outClass);
+            cardEl.addClass(inClass);
+            cardEl[0].offsetHeight;
+            cardEl.removeClass(inClass);
+
+            const handleIn = function (evt2) {
+                if (evt2.target !== cardEl[0]) return;
+                cardEl.off('transitionend', handleIn);
+                cardAnimating = false;
+                if (cardAnimationTimer) {
+                    clearTimeout(cardAnimationTimer);
+                    cardAnimationTimer = null;
+                }
+            };
+            cardEl.on('transitionend', handleIn);
+            cardAnimationTimer = setTimeout(() => {
+                cardAnimating = false;
+                cardEl.off('transitionend', handleIn);
+            }, 400);
+        };
+
+        cardEl.on('transitionend', handleOut);
     }
 
     $('#btn-next-study').on('click', goToNextCard);
@@ -1665,7 +1721,7 @@ $('#btn-pronounce').on('click', function (e) {
 });
 
 // قبلی در مرحله مطالعه
-$('#btn-prev-study').on('click', goToPrevCard);
+    $('#btn-prev-study').on('click', goToPrevCard);
 
 // قبلی در مرحله تست/مرور
 $('#btn-prev-test').on('click', function () {
@@ -1700,9 +1756,9 @@ $('#leitner-card').on('touchend mouseup', function (evt) {
 
     swipeHandled = true;
     if (dx > 0) {
-        goToNextCard();
+        animateCardNavigation('right', goToNextCard);
     } else {
-        goToPrevCard();
+        animateCardNavigation('left', goToPrevCard);
     }
     setTimeout(() => { swipeHandled = false; }, 150);
 });
