@@ -450,6 +450,11 @@ header('Content-Type: text/html; charset=utf-8');
         .leitner-card .back {
             display: none;
         }
+        #card-back-meaning {
+            background: #f1f3f5;
+            padding: 1rem 1.2rem;
+            border-radius: 0.75rem;
+        }
         .leitner-card.flipped .front {
             display: none;
         }
@@ -1194,14 +1199,31 @@ header('Content-Type: text/html; charset=utf-8');
 
 
 
+    let swipeStartX = null;
+    let swipeStartY = null;
+    let swipeHandled = false;
+    const SWIPE_THRESHOLD = 50;
+
     $('#leitner-card').on('click', function () {
+        if (swipeHandled) {
+            swipeHandled = false;
+            return;
+        }
         $(this).toggleClass('flipped');
     });
 
-    $('#btn-next-study').on('click', function () {
+    function goToNextCard() {
         sessionState.index++;
         loadCurrentCard();
-    });
+    }
+
+    function goToPrevCard() {
+        if (sessionState.index <= 0) return;
+        sessionState.index--;
+        loadCurrentCard();
+    }
+
+    $('#btn-next-study').on('click', goToNextCard);
 
     function sendResultForCurrentCard(isRight) {
         const card = sessionState.currentCard;
@@ -1643,17 +1665,46 @@ $('#btn-pronounce').on('click', function (e) {
 });
 
 // قبلی در مرحله مطالعه
-$('#btn-prev-study').on('click', function () {
-    if (sessionState.index <= 0) return;
-    sessionState.index--;
-    loadCurrentCard();
-});
+$('#btn-prev-study').on('click', goToPrevCard);
 
 // قبلی در مرحله تست/مرور
 $('#btn-prev-test').on('click', function () {
     if (sessionState.index <= 0) return;
     sessionState.index--;
     loadCurrentCard();
+});
+
+// Swipe gesture برای کارت لایتنر
+function extractPoint(evt) {
+    const e = evt.originalEvent || evt;
+    if (e.touches && e.touches[0]) return e.touches[0];
+    if (e.changedTouches && e.changedTouches[0]) return e.changedTouches[0];
+    return e;
+}
+
+$('#leitner-card').on('touchstart mousedown', function (evt) {
+    const p = extractPoint(evt);
+    swipeStartX = p.clientX;
+    swipeStartY = p.clientY;
+});
+
+$('#leitner-card').on('touchend mouseup', function (evt) {
+    if (swipeStartX === null || swipeStartY === null) return;
+
+    const p = extractPoint(evt);
+    const dx = p.clientX - swipeStartX;
+    const dy = p.clientY - swipeStartY;
+    swipeStartX = swipeStartY = null;
+
+    if (Math.abs(dx) < SWIPE_THRESHOLD || Math.abs(dx) < Math.abs(dy)) return;
+
+    swipeHandled = true;
+    if (dx > 0) {
+        goToNextCard();
+    } else {
+        goToPrevCard();
+    }
+    setTimeout(() => { swipeHandled = false; }, 150);
 });
 
 
@@ -1700,11 +1751,7 @@ $('#btn-pronounce').on('click', function (e) {
 });
 
 // قبلی در مرحله مطالعه
-$('#btn-prev-study').on('click', function () {
-    if (sessionState.index <= 0) return;
-    sessionState.index--;
-    loadCurrentCard();
-});
+$('#btn-prev-study').on('click', goToPrevCard);
 
 // قبلی در مرحله تست/مرور
 $('#btn-prev-test').on('click', function () {
