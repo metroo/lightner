@@ -443,6 +443,7 @@ header('Content-Type: text/html; charset=utf-8');
             cursor: pointer;
             min-height: 230px;
             transition: transform 0.25s ease, opacity 0.25s ease;
+            touch-action: pan-y;
         }
         .leitner-card .front,
         .leitner-card .back {
@@ -1761,6 +1762,19 @@ $('#leitner-card').on('touchend mouseup', function (evt) {
         animateCardNavigation('left', goToPrevCard);
     }
     setTimeout(() => { swipeHandled = false; }, 150);
+});
+
+// جلوگیری از جابجایی صفحه در حین سوایپ افقی کارت
+$('#leitner-card').on('touchmove', function (evt) {
+    if (swipeStartX === null || swipeStartY === null) return;
+
+    const p = extractPoint(evt);
+    const dx = p.clientX - swipeStartX;
+    const dy = p.clientY - swipeStartY;
+
+    if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 10) {
+        evt.preventDefault();
+    }
 });
 
 
