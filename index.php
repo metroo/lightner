@@ -432,6 +432,7 @@ header('Content-Type: text/html; charset=utf-8');
     <style>
         body {
             background-color: #f8f9fa;
+            overflow-x: hidden;
         }
         .leitner-card {
             max-width: 420px;
@@ -1774,6 +1775,7 @@ $('#leitner-card').on('touchmove', function (evt) {
 
     if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 10) {
         evt.preventDefault();
+        evt.stopPropagation();
     }
 });
 
