@@ -14,7 +14,7 @@ session_start();
 
 // یوزر/پسورد ساده (در صورت نیاز تغییر دهید)
 const ADMIN_USER = 'admin';
-const ADMIN_PASS = 'Admin123!';
+const ADMIN_PASS = 'Webnet!12@12';
 
 // هندل لاگین ساده (غیر AJAX)
 $loginError = null;
@@ -54,6 +54,55 @@ if (isset($_GET['api'])) {
     }
 
     try {
+		
+		if ($action === 'pronounce_google_stream') {
+			$word = trim($_GET['word'] ?? '');
+			if ($word === '') {
+				http_response_code(400);
+				exit('word required');
+			}
+
+			$q  = rawurlencode($word);
+			$tl = 'en'; // یا en-US / en-GB
+			$url = "https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&tl={$tl}&q={$q}";
+
+			$ctx = stream_context_create([
+				'http' => [
+					'method'  => 'GET',
+					'header'  => "User-Agent: Mozilla/5.0\r\nAccept-Language: en-US,en;q=0.9\r\n",
+					'timeout' => 8,
+				]
+			]);
+
+			$audio = @file_get_contents($url, false, $ctx);
+			if ($audio === false) {
+				http_response_code(502);
+				exit('tts blocked or unavailable');
+			}
+
+			header('Content-Type: audio/mpeg');
+			header('Cache-Control: no-store');
+			echo $audio;
+			exit;
+		}
+
+
+		if ($action === 'pronounce_google') {
+			$word = trim($_GET['word'] ?? '');
+			if ($word === '') {
+				echo json_encode(['ok' => false, 'error' => 'word required']);
+				exit;
+			}
+
+			$q  = rawurlencode($word);
+			$tl = 'en'; // یا en-US / en-GB
+			$url = "https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&tl={$tl}&q={$q}";
+
+			echo json_encode(['ok' => true, 'mp3' => $url, 'source' => 'google_translate_tts']);
+			exit;
+		}
+
+
         if ($action === 'add_word') {
             $word    = trim($_POST['word'] ?? '');
             $meaning = trim($_POST['meaning'] ?? '');
@@ -196,6 +245,65 @@ if (isset($_GET['api'])) {
             echo json_encode(['ok' => $ok]);
             exit;
         }
+
+
+        if ($action === 'pronounce') {
+            $word = trim($_GET['word'] ?? '');
+            if ($word === '') {
+                echo json_encode(['ok' => false, 'error' => 'word required']);
+                exit;
+            }
+
+            // نکته: Cambridge معمولاً با مسیر زیر کار می‌کند
+            $urlWord = rawurlencode(mb_strtolower($word));
+            $url = "https://dictionary.cambridge.org/dictionary/english/{$urlWord}";
+
+            $ctx = stream_context_create([
+                'http' => [
+                    'method'  => 'GET',
+                    'header'  => "User-Agent: Mozilla/5.0\r\nAccept-Language: en-US,en;q=0.9\r\n",
+                    'timeout' => 8,
+                ]
+            ]);
+
+            $html = @file_get_contents($url, false, $ctx);
+            if ($html === false) {
+                echo json_encode(['ok' => false, 'error' => 'fetch_failed']);
+                exit;
+            }
+
+            // استخراج لینک mp3 ها از data-src-mp3
+            preg_match_all('/data-src-mp3="([^"]+)"/i', $html, $m);
+            $links = $m[1] ?? [];
+
+            if (!$links) {
+                echo json_encode(['ok' => false, 'error' => 'audio_not_found']);
+                exit;
+            }
+
+            // ترجیح: US pronunciation اگر موجود بود
+            $picked = null;
+            foreach ($links as $lnk) {
+                if (stripos($lnk, '/us_pron/') !== false) {
+                    $picked = $lnk;
+                    break;
+                }
+            }
+            if ($picked === null) {
+                $picked = $links[0];
+            }
+
+            // اگر لینک نسبی بود کاملش کن
+            if (strpos($picked, '//') === 0) {
+                $picked = 'https:' . $picked;
+            } elseif (strpos($picked, '/') === 0) {
+                $picked = 'https://dictionary.cambridge.org' . $picked;
+            }
+
+            echo json_encode(['ok' => true, 'mp3' => $picked, 'source' => 'cambridge']);
+            exit;
+        }
+
 
         echo json_encode(['ok' => false, 'error' => 'عملیات ناشناخته.']);
         exit;
@@ -535,11 +643,19 @@ header('Content-Type: text/html; charset=utf-8');
 					</div>
 				</div>
  
-				<div id="session-buttons-study" class="mb-3">
+				<div id="session-buttons-study" class="mb-3 d-flex justify-content-center gap-2 flex-wrap">
+					<button id="btn-prev-study" class="btn btn-outline-secondary big-btn" disabled>
+						لغت قبلی
+					</button>
+			  <button id="btn-pronounce" type="button" class="btn btn-sm btn-outline-secondary" title="پخش تلفظ">
+				🔊
+			</button>
+			
 					<button id="btn-next-study" class="btn btn-primary big-btn">
 						لغت بعدی
 					</button>
 				</div>
+
 
 				<div id="session-buttons-test" class="mb-3" style="display:none;">
 					<button id="btn-wrong" class="btn btn-outline-danger big-btn me-2">
@@ -910,6 +1026,23 @@ header('Content-Type: text/html; charset=utf-8');
         $('#card-back-meaning').text(card.meaning);
         $('#card-back-example').text(card.example || '');
         $('#leitner-card').removeClass('flipped');
+		
+		
+		 const hasPrev = sessionState.index > 0;
+		const prevCard = hasPrev ? sessionState.currentList[sessionState.index - 1] : null;
+
+		if (hasPrev && prevCard && prevCard.word) {
+			$('#prev-word-text').text(prevCard.word);
+			$('#prev-word-hint').show();
+		} else {
+			$('#prev-word-hint').hide();
+			$('#prev-word-text').text('');
+		}
+
+		// دکمه‌های قبلی
+		$('#btn-prev-study').prop('disabled', !hasPrev);
+		$('#btn-prev-test').prop('disabled', !hasPrev);
+		
     }
 
 	 
@@ -1058,6 +1191,7 @@ header('Content-Type: text/html; charset=utf-8');
 		sessionState.currentCard = sessionState.currentList[sessionState.index];
 		updateCardView();
 	}
+
 
 
     $('#leitner-card').on('click', function () {
@@ -1498,6 +1632,87 @@ function showToast(message, type = 'primary') {
     }
     appToast.show();
 }
+
+// دکمه تلفظ
+$('#btn-pronounce').on('click', function (e) {
+    e.preventDefault();
+    e.stopPropagation(); // کارت flip نشود
+    const card = sessionState.currentCard;
+    if (!card || !card.word) return;
+    requestPronounce(card.word);
+});
+
+// قبلی در مرحله مطالعه
+$('#btn-prev-study').on('click', function () {
+    if (sessionState.index <= 0) return;
+    sessionState.index--;
+    loadCurrentCard();
+});
+
+// قبلی در مرحله تست/مرور
+$('#btn-prev-test').on('click', function () {
+    if (sessionState.index <= 0) return;
+    sessionState.index--;
+    loadCurrentCard();
+});
+
+
+const pronounceCache = new Map(); // word -> mp3 url
+let currentAudio = null;
+
+function stopAudioIfAny() {
+    if (currentAudio) {
+        try { currentAudio.pause(); } catch(e){}
+        currentAudio = null;
+    }
+}
+
+function playMp3(url) {
+    stopAudioIfAny();
+    currentAudio = new Audio(url);
+    currentAudio.play().catch(() => {
+        showToast('پخش صدا ممکن نشد.', 'warning');
+    });
+}
+
+
+function requestPronounce(word) {
+  word = (word || '').trim();
+  if (!word) return;
+
+  const src = 'index.php?api=pronounce_google_stream&word=' + encodeURIComponent(word);
+  stopAudioIfAny();
+  currentAudio = new Audio(src);
+  currentAudio.play();
+}
+
+
+
+
+
+// دکمه تلفظ
+$('#btn-pronounce').on('click', function (e) {
+    e.preventDefault();
+    e.stopPropagation(); // کارت flip نشود
+    const card = sessionState.currentCard;
+    if (!card || !card.word) return;
+    requestPronounce(card.word);
+});
+
+// قبلی در مرحله مطالعه
+$('#btn-prev-study').on('click', function () {
+    if (sessionState.index <= 0) return;
+    sessionState.index--;
+    loadCurrentCard();
+});
+
+// قبلی در مرحله تست/مرور
+$('#btn-prev-test').on('click', function () {
+    if (sessionState.index <= 0) return;
+    sessionState.index--;
+    loadCurrentCard();
+});
+
 
 // اجرا بعد از لود صفحه
 $(function () {
