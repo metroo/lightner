@@ -412,7 +412,7 @@ if (!$loggedIn) {
 header('Content-Type: text/html; charset=utf-8');
 ?>
 <!DOCTYPE html>
-<html lang="fa" dir="rtl">
+<html lang="fa" >
 <head>
     <meta charset="UTF-8">
     <meta http-equiv="content-language" content="fa-ir">
@@ -479,11 +479,12 @@ header('Content-Type: text/html; charset=utf-8');
         .swipe-out-right { transform: translateX(120%); opacity: 0; }
         .swipe-in-from-left { transform: translateX(-120%); opacity: 0; }
         .swipe-in-from-right { transform: translateX(120%); opacity: 0; }
+		
     </style>
 </head>
 <body>
 
-<div class="container py-3">
+<div class="container py-3" dir="rtl">
     <div class="d-flex justify-content-between align-items-center mb-3">
         <h1 class="h4 mb-0">جعبه لایتنر</h1>
         <div>
