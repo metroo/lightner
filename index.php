@@ -434,8 +434,18 @@ header('Content-Type: text/html; charset=utf-8');
             background-color: #f8f9fa;
             overflow-x: hidden;
         }
-        .leitner-card {
+        .leitner-card-wrapper {
+            position: relative;
             max-width: 420px;
+            margin: 0 auto;
+            min-height: 260px;
+            overflow: hidden;
+        }
+        .leitner-card {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
             margin: 0 auto;
             padding: 2rem;
             border-radius: 1rem;
@@ -445,6 +455,18 @@ header('Content-Type: text/html; charset=utf-8');
             min-height: 230px;
             transition: transform 0.25s ease, opacity 0.25s ease;
             touch-action: pan-y;
+            opacity: 0;
+            pointer-events: none;
+        }
+        .leitner-card.card-visible {
+            opacity: 1;
+            pointer-events: auto;
+            z-index: 2;
+        }
+        .leitner-card.card-hidden {
+            opacity: 0;
+            pointer-events: none;
+            z-index: 1;
         }
         .leitner-card .front,
         .leitner-card .back {
@@ -453,7 +475,7 @@ header('Content-Type: text/html; charset=utf-8');
         .leitner-card .back {
             display: none;
         }
-        #card-back-meaning {
+        .card-back-meaning {
             background: #f1f3f5;
             padding: 1rem 1.2rem;
             border-radius: 0.75rem;
@@ -645,16 +667,28 @@ header('Content-Type: text/html; charset=utf-8');
 					<span id="session-total">0</span>
 				</p>
 
-				<div id="leitner-card" class="leitner-card mb-3">
-					<div class="front">
- 						<div id="card-front-word" class="fw-bold"></div>
-					</div>
-					<div class="back">
- 						<div id="card-back-meaning"></div>
-						<hr>
-						<div id="card-back-example" class="ltr small"></div>
-					</div>
-				</div>
+                                <div id="leitner-card-wrapper" class="leitner-card-wrapper mb-3">
+                                        <div id="leitner-card-1" class="leitner-card card-visible">
+                                                <div class="front">
+                                                        <div class="card-front-word fw-bold"></div>
+                                                </div>
+                                                <div class="back">
+                                                        <div class="card-back-meaning"></div>
+                                                        <hr>
+                                                        <div class="card-back-example ltr small"></div>
+                                                </div>
+                                        </div>
+                                        <div id="leitner-card-2" class="leitner-card card-hidden">
+                                                <div class="front">
+                                                        <div class="card-front-word fw-bold"></div>
+                                                </div>
+                                                <div class="back">
+                                                        <div class="card-back-meaning"></div>
+                                                        <hr>
+                                                        <div class="card-back-example ltr small"></div>
+                                                </div>
+                                        </div>
+                                </div>
  
 				<div id="session-buttons-study" class="mb-3 d-flex justify-content-center gap-2 flex-wrap">
 					<button id="btn-prev-study" class="btn btn-outline-secondary big-btn" disabled>
@@ -832,6 +866,9 @@ header('Content-Type: text/html; charset=utf-8');
     let searchCurrentPage = 1;
     const searchPerPage = 20;
 
+    const cardSelectors = ['#leitner-card-1', '#leitner-card-2'];
+    let activeCardSelector = cardSelectors[0];
+
     function showMessage(selector, message, isError = false) {
         const el = $(selector);
         el.text(message);
@@ -989,11 +1026,16 @@ header('Content-Type: text/html; charset=utf-8');
 			sessionState.newPack     = ses.new_pack || [];
 			sessionState.sessionLimit = ses.session_limit || (ses.new_pack ? ses.new_pack.length : 0);
 			sessionState.stage       = 'idle';
-			sessionState.round       = 1;
-			sessionState.index       = 0;
-			sessionState.currentList = [];
-			sessionState.currentCard = null;
-			sessionState.chunkIndex  = 0;
+                        sessionState.round       = 1;
+                        sessionState.index       = 0;
+                        sessionState.currentList = [];
+                        sessionState.currentCard = null;
+                        sessionState.chunkIndex  = 0;
+
+                        activeCardSelector = cardSelectors[0];
+                        fillCardContent(getActiveCardEl(), null);
+                        getInactiveCardEl().removeClass('card-visible swipe-out-left swipe-out-right swipe-in-from-left swipe-in-from-right').addClass('card-hidden');
+                        getActiveCardEl().addClass('card-visible').removeClass('card-hidden flipped');
 
 			packInfo.size        = sessionState.newPack.length;
 			packInfo.sessionSize = sessionState.sessionLimit;
@@ -1019,26 +1061,44 @@ header('Content-Type: text/html; charset=utf-8');
 				$('#session-done').show().text('امروز کارتی برای مرور وجود ندارد.');
 			}
 		});
-	});
+        });
 
-   
+
+    function getActiveCardEl() {
+        return $(activeCardSelector);
+    }
+
+    function getInactiveCardEl() {
+        return $(activeCardSelector === cardSelectors[0] ? cardSelectors[1] : cardSelectors[0]);
+    }
+
+    function fillCardContent($card, cardData) {
+        const word = cardData ? (cardData.word || '') : '';
+        const meaning = cardData ? (cardData.meaning || '') : '';
+        const example = cardData ? (cardData.example || '') : '';
+
+        $card.find('.card-front-word').text(word);
+        $card.find('.card-back-meaning').text(meaning);
+        $card.find('.card-back-example').text(example);
+        $card.removeClass('flipped swipe-out-left swipe-out-right swipe-in-from-left swipe-in-from-right');
+    }
+
+
     function updateCardView() {
         const idx = sessionState.index + 1;
         $('#session-index').text(idx);
         $('#session-total').text(sessionState.currentList.length);
 
         const card = sessionState.currentCard;
-        if (!card) {
-            $('#card-front-word').text('');
-            $('#card-back-meaning').text('');
-            $('#card-back-example').text('');
-            return;
-        }
+        const $activeCard = getActiveCardEl();
+        const $inactiveCard = getInactiveCardEl();
 
-        $('#card-front-word').text(card.word);
-        $('#card-back-meaning').text(card.meaning);
-        $('#card-back-example').text(card.example || '');
-        $('#leitner-card').removeClass('flipped');
+        fillCardContent($activeCard, card);
+
+        if (!$inactiveCard.hasClass('card-hidden')) {
+            $inactiveCard.removeClass('card-visible').addClass('card-hidden');
+        }
+        $activeCard.addClass('card-visible').removeClass('card-hidden');
 		
 		
 		 const hasPrev = sessionState.index > 0;
@@ -1214,12 +1274,14 @@ header('Content-Type: text/html; charset=utf-8');
     let cardAnimationTimer = null;
     const SWIPE_THRESHOLD = 50;
 
-    $('#leitner-card').on('click', function () {
+    $('#leitner-card-wrapper').on('click', '.leitner-card', function () {
+        const $card = $(this);
+        if (!$card.hasClass('card-visible')) return;
         if (swipeHandled) {
             swipeHandled = false;
             return;
         }
-        $(this).toggleClass('flipped');
+        $card.toggleClass('flipped');
     });
 
     function goToNextCard() {
@@ -1238,48 +1300,58 @@ header('Content-Type: text/html; charset=utf-8');
     function animateCardNavigation(direction, changeFn) {
         if (cardAnimating) return;
 
-        const cardEl = $('#leitner-card');
+        const delta = changeFn === goToPrevCard ? -1 : 1;
+        const targetIndex = sessionState.index + delta;
+        if (changeFn === goToPrevCard && targetIndex < 0) return;
+
+        const outgoing = getActiveCardEl();
+        const incoming = getInactiveCardEl();
         const outClass = direction === 'right' ? 'swipe-out-right' : 'swipe-out-left';
         const inClass = direction === 'right' ? 'swipe-in-from-left' : 'swipe-in-from-right';
 
-        const canChange = changeFn === goToPrevCard ? (sessionState.index > 0) : true;
-        if (!canChange) return;
+        const nextCardData = sessionState.currentList[targetIndex] || sessionState.currentCard || null;
+        fillCardContent(incoming, nextCardData);
+
+        incoming.removeClass('card-hidden card-visible swipe-out-left swipe-out-right swipe-in-from-left swipe-in-from-right');
+        outgoing.removeClass('swipe-out-left swipe-out-right swipe-in-from-left swipe-in-from-right');
+
+        incoming.addClass('card-visible ' + inClass);
+        incoming[0].offsetHeight;
+        incoming.removeClass(inClass);
+
+        outgoing.addClass(outClass);
 
         cardAnimating = true;
         if (cardAnimationTimer) {
             clearTimeout(cardAnimationTimer);
             cardAnimationTimer = null;
         }
-        cardEl.addClass(outClass);
 
-        const handleOut = function (evt) {
-            if (evt.target !== cardEl[0]) return;
-            cardEl.off('transitionend', handleOut);
+        let finalized = false;
+        const finalize = function () {
+            if (finalized) return;
+            finalized = true;
+
+            outgoing.removeClass(outClass + ' card-visible').addClass('card-hidden').removeClass('flipped');
+            incoming.removeClass('card-hidden swipe-out-left swipe-out-right swipe-in-from-left swipe-in-from-right');
+            activeCardSelector = '#' + incoming.attr('id');
+
+            cardAnimating = false;
+            if (cardAnimationTimer) {
+                clearTimeout(cardAnimationTimer);
+                cardAnimationTimer = null;
+            }
 
             changeFn();
-
-            cardEl.removeClass(outClass);
-            cardEl.addClass(inClass);
-            cardEl[0].offsetHeight;
-            cardEl.removeClass(inClass);
-
-            const handleIn = function (evt2) {
-                if (evt2.target !== cardEl[0]) return;
-                cardEl.off('transitionend', handleIn);
-                cardAnimating = false;
-                if (cardAnimationTimer) {
-                    clearTimeout(cardAnimationTimer);
-                    cardAnimationTimer = null;
-                }
-            };
-            cardEl.on('transitionend', handleIn);
-            cardAnimationTimer = setTimeout(() => {
-                cardAnimating = false;
-                cardEl.off('transitionend', handleIn);
-            }, 400);
         };
 
-        cardEl.on('transitionend', handleOut);
+        outgoing.on('transitionend', function handleOut(evt) {
+            if (evt.target !== outgoing[0]) return;
+            outgoing.off('transitionend', handleOut);
+            finalize();
+        });
+
+        cardAnimationTimer = setTimeout(finalize, 500);
     }
 
     $('#btn-next-study').on('click', goToNextCard);
@@ -1636,35 +1708,39 @@ function legacyCopy(text) {
  
 
 
-	function enableLongPressCopy() {
-		const el = document.getElementById('card-front-word');
-		if (!el) return;
+        function enableLongPressCopy() {
+                const wrapper = document.getElementById('leitner-card-wrapper');
+                if (!wrapper) return;
 
-		let pressTimer;
+                let pressTimer;
 
-		const startPress = function (e) {
-			// برای touch از scroll جلوگیری نکنیم
-			pressTimer = setTimeout(() => {
-				const text = el.innerText || el.textContent || '';
-				copyTextToClipboard(text);
-			}, 600); // 600ms = long press
-		};
+                const startPress = function (e) {
+                        const target = e.target.closest('.card-front-word');
+                        if (!target) return;
+                        const parentCard = target.closest('.leitner-card');
+                        if (!parentCard || !parentCard.classList.contains('card-visible')) return;
 
-		const cancelPress = function () {
-			clearTimeout(pressTimer);
-		};
+                        pressTimer = setTimeout(() => {
+                                const text = target.innerText || target.textContent || '';
+                                copyTextToClipboard(text);
+                        }, 600); // 600ms = long press
+                };
 
-		// دسکتاپ
-		el.addEventListener('mousedown', startPress);
-		el.addEventListener('mouseup', cancelPress);
-		el.addEventListener('mouseleave', cancelPress);
+                const cancelPress = function () {
+                        clearTimeout(pressTimer);
+                };
 
-		// موبایل
-		el.addEventListener('touchstart', startPress);
-		el.addEventListener('touchend', cancelPress);
-		el.addEventListener('touchmove', cancelPress);
-		el.addEventListener('touchcancel', cancelPress);
-	}
+                // دسکتاپ
+                wrapper.addEventListener('mousedown', startPress);
+                wrapper.addEventListener('mouseup', cancelPress);
+                wrapper.addEventListener('mouseleave', cancelPress);
+
+                // موبایل
+                wrapper.addEventListener('touchstart', startPress);
+                wrapper.addEventListener('touchend', cancelPress);
+                wrapper.addEventListener('touchmove', cancelPress);
+                wrapper.addEventListener('touchcancel', cancelPress);
+        }
 
 
 
@@ -1741,13 +1817,15 @@ function extractPoint(evt) {
     return e;
 }
 
-$('#leitner-card').on('touchstart mousedown', function (evt) {
+$('#leitner-card-wrapper').on('touchstart mousedown', '.leitner-card', function (evt) {
+    if (!$(this).hasClass('card-visible')) return;
     const p = extractPoint(evt);
     swipeStartX = p.clientX;
     swipeStartY = p.clientY;
 });
 
-$('#leitner-card').on('touchend mouseup', function (evt) {
+$('#leitner-card-wrapper').on('touchend mouseup', '.leitner-card', function (evt) {
+    if (!$(this).hasClass('card-visible')) return;
     if (swipeStartX === null || swipeStartY === null) return;
 
     const p = extractPoint(evt);
@@ -1767,7 +1845,8 @@ $('#leitner-card').on('touchend mouseup', function (evt) {
 });
 
 // جلوگیری از جابجایی صفحه در حین سوایپ افقی کارت
-$('#leitner-card').on('touchmove', function (evt) {
+$('#leitner-card-wrapper').on('touchmove', '.leitner-card', function (evt) {
+    if (!$(this).hasClass('card-visible')) return;
     if (swipeStartX === null || swipeStartY === null) return;
 
     const p = extractPoint(evt);
