@@ -104,9 +104,12 @@ if (isset($_GET['api'])) {
 
 
         if ($action === 'add_word') {
-            $word    = trim($_POST['word'] ?? '');
-            $meaning = trim($_POST['meaning'] ?? '');
-            $example = trim($_POST['example'] ?? '');
+            $word         = trim($_POST['word'] ?? '');
+            $meaning      = trim($_POST['meaning'] ?? '');
+            $exampleLatin = trim($_POST['example_latin'] ?? '');
+            $exampleFa    = trim($_POST['example_fa'] ?? '');
+            $pos          = trim($_POST['pos'] ?? '');
+            $level        = trim($_POST['level'] ?? '');
 
             if ($word === '' || $meaning === '') {
                 echo json_encode(['ok' => false, 'error' => 'لغت و معنی الزامی است.']);
@@ -124,16 +127,19 @@ if (isset($_GET['api'])) {
                 exit;
             }
 
-            excel_add_word($word, $meaning, $example);
+            excel_add_word($word, $meaning, $exampleLatin, $exampleFa, $pos, $level);
             echo json_encode(['ok' => true]);
             exit;
         }
 
         if ($action === 'update_word') {
-            $id      = (int) ($_POST['id'] ?? 0);
-            $word    = trim($_POST['word'] ?? '');
-            $meaning = trim($_POST['meaning'] ?? '');
-            $example = trim($_POST['example'] ?? '');
+            $id           = (int) ($_POST['id'] ?? 0);
+            $word         = trim($_POST['word'] ?? '');
+            $meaning      = trim($_POST['meaning'] ?? '');
+            $exampleLatin = trim($_POST['example_latin'] ?? '');
+            $exampleFa    = trim($_POST['example_fa'] ?? '');
+            $pos          = trim($_POST['pos'] ?? '');
+            $level        = trim($_POST['level'] ?? '');
 
             if (!$id || $word === '' || $meaning === '') {
                 echo json_encode(['ok' => false, 'error' => 'ورودی نامعتبر برای ویرایش.']);
@@ -147,7 +153,7 @@ if (isset($_GET['api'])) {
                 exit;
             }
 
-            $updated = excel_update_word($id, $word, $meaning, $example);
+            $updated = excel_update_word($id, $word, $meaning, $exampleLatin, $exampleFa, $pos, $level);
             echo json_encode(['ok' => $updated !== null, 'item' => $updated]);
             exit;
         }
@@ -475,6 +481,20 @@ header('Content-Type: text/html; charset=utf-8');
         .leitner-card .back {
             display: none;
         }
+        .card-meta > div {
+            line-height: 1.2;
+        }
+        .card-pos-badge, .card-level-badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 12px;
+            margin-bottom: 4px;
+        }
+        .card-pos-badge { background: #f8f9fa; color: #343a40; }
+        .card-level-badge { background: #e7f1ff; color: #0d6efd; }
+        .card-front-example:empty, .card-back-example-fa:empty {
+            display: none;
+        }
         .card-back-meaning {
             background: #f1f3f5;
             padding: 1rem 1.2rem;
@@ -566,12 +586,28 @@ header('Content-Type: text/html; charset=utf-8');
 
                             <div class="mb-3">
                                 <label class="form-label">معنی (فارسی)</label>
-								<input type="text" class="form-control" name="meaning" required> 
+                                <input type="text" class="form-control" name="meaning" required>
                             </div>
 
                             <div class="mb-3">
-                                <label class="form-label">مثال (جمله انگلیسی)</label>
-                                <textarea class="form-control ltr" name="example" rows="2"></textarea>
+                                <label class="form-label">مثال (جمله لاتین / انگلیسی)</label>
+                                <textarea class="form-control ltr" name="example_latin" rows="2"></textarea>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label">مثال (ترجمه فارسی)</label>
+                                <textarea class="form-control" name="example_fa" rows="2"></textarea>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">نوع کلمه (صفت، قید و ...)</label>
+                                    <input type="text" class="form-control" name="pos" placeholder="مثلاً adjective">
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">سطح لغت (A2, B1, B2, ...)</label>
+                                    <input type="text" class="form-control" name="level" placeholder="مثلاً B1">
+                                </div>
                             </div>
 
                             <button type="submit" class="btn btn-primary">
@@ -596,7 +632,9 @@ header('Content-Type: text/html; charset=utf-8');
                                 فایل Excel باید حداقل ۳ ستون داشته باشد:
                                 <strong>لغت</strong> در ستون A،
                                 <strong>معنی</strong> در ستون B،
-                                <strong>مثال</strong> در ستون C (اختیاری).
+                                <strong>مثال لاتین</strong> در ستون C (اختیاری).
+                                ستون‌های اختیاری بعدی: <strong>مثال فارسی</strong> در D،
+                                <strong>نوع کلمه</strong> در E و <strong>سطح لغت</strong> در F.
                                 لغات تکراری از روی ستون A نادیده گرفته می‌شوند.
                             </p>
                             <form id="form-import-excel" enctype="multipart/form-data">
@@ -670,22 +708,48 @@ header('Content-Type: text/html; charset=utf-8');
                                 <div id="leitner-card-wrapper" class="leitner-card-wrapper mb-3">
                                         <div id="leitner-card-1" class="leitner-card card-visible">
                                                 <div class="front">
-                                                        <div class="card-front-word fw-bold"></div>
+                                                        <div class="d-flex justify-content-between align-items-start mb-2">
+                                                                <div class="card-front-word fw-bold"></div>
+                                                                <div class="card-meta text-muted small text-end">
+                                                                        <div class="card-pos-badge"></div>
+                                                                        <div class="card-level-badge"></div>
+                                                                </div>
+                                                        </div>
+                                                        <div class="card-front-example ltr small text-muted"></div>
                                                 </div>
                                                 <div class="back">
-                                                        <div class="card-back-meaning"></div>
+                                                        <div class="d-flex justify-content-between align-items-start mb-2">
+                                                                <div class="card-back-meaning"></div>
+                                                                <div class="card-meta text-muted small text-end">
+                                                                        <div class="card-pos-badge"></div>
+                                                                        <div class="card-level-badge"></div>
+                                                                </div>
+                                                        </div>
                                                         <hr>
-                                                        <div class="card-back-example ltr small"></div>
+                                                        <div class="card-back-example-fa small"></div>
                                                 </div>
                                         </div>
                                         <div id="leitner-card-2" class="leitner-card card-hidden">
                                                 <div class="front">
-                                                        <div class="card-front-word fw-bold"></div>
+                                                        <div class="d-flex justify-content-between align-items-start mb-2">
+                                                                <div class="card-front-word fw-bold"></div>
+                                                                <div class="card-meta text-muted small text-end">
+                                                                        <div class="card-pos-badge"></div>
+                                                                        <div class="card-level-badge"></div>
+                                                                </div>
+                                                        </div>
+                                                        <div class="card-front-example ltr small text-muted"></div>
                                                 </div>
                                                 <div class="back">
-                                                        <div class="card-back-meaning"></div>
+                                                        <div class="d-flex justify-content-between align-items-start mb-2">
+                                                                <div class="card-back-meaning"></div>
+                                                                <div class="card-meta text-muted small text-end">
+                                                                        <div class="card-pos-badge"></div>
+                                                                        <div class="card-level-badge"></div>
+                                                                </div>
+                                                        </div>
                                                         <hr>
-                                                        <div class="card-back-example ltr small"></div>
+                                                        <div class="card-back-example-fa small"></div>
                                                 </div>
                                         </div>
                                 </div>
@@ -747,15 +811,18 @@ header('Content-Type: text/html; charset=utf-8');
 
             <div class="table-responsive mt-3">
                 <table class="table table-striped table-sm align-middle" id="tbl-search-results">
-                    <thead>
-                    <tr>
-                        <th>#</th>
-                        <th>لغت</th>
-                        <th>معنی</th>
-                        <th>مثال</th>
-                        <th>خانه</th>
-                        <th>وضعیت</th>
-                        <th>مرور بعدی</th>
+                      <thead>
+                      <tr>
+                          <th>#</th>
+                          <th>لغت</th>
+                          <th>نوع</th>
+                          <th>سطح</th>
+                          <th>معنی</th>
+                          <th>مثال لاتین</th>
+                          <th>مثال فارسی</th>
+                          <th>خانه</th>
+                          <th>وضعیت</th>
+                          <th>مرور بعدی</th>
                         <th>عملیات</th>
                     </tr>
                     </thead>
@@ -929,8 +996,11 @@ header('Content-Type: text/html; charset=utf-8');
                 const item = res.item;
                 if (item) {
                     $('input[name="word"]').val(item.word);
-                    $('textarea[name="meaning"]').val(item.meaning);
-                    $('textarea[name="example"]').val(item.example);
+                    $('input[name="meaning"]').val(item.meaning);
+                    $('textarea[name="example_latin"]').val(item.example_latin || item.example || '');
+                    $('textarea[name="example_fa"]').val(item.example_fa || '');
+                    $('input[name="pos"]').val(item.pos || '');
+                    $('input[name="level"]').val(item.level || '');
                     $('#edit-id').val(item.id);
                     $('#btn-update-word').show();
                     showMessage('#add-word-msg', 'این لغت قبلاً ثبت شده است. می‌توانید آن را ویرایش کنید.', true);
@@ -953,8 +1023,11 @@ header('Content-Type: text/html; charset=utf-8');
         const data = {
             id: id,
             word: $('input[name="word"]').val(),
-            meaning: $('textarea[name="meaning"]').val(),
-            example: $('textarea[name="example"]').val()
+            meaning: $('input[name="meaning"]').val(),
+            example_latin: $('textarea[name="example_latin"]').val(),
+            example_fa: $('textarea[name="example_fa"]').val(),
+            pos: $('input[name="pos"]').val(),
+            level: $('input[name="level"]').val()
         };
 
         $.post('index.php?api=update_word', data, function (res) {
@@ -1075,11 +1148,30 @@ header('Content-Type: text/html; charset=utf-8');
     function fillCardContent($card, cardData) {
         const word = cardData ? (cardData.word || '') : '';
         const meaning = cardData ? (cardData.meaning || '') : '';
-        const example = cardData ? (cardData.example || '') : '';
+        const exampleLatin = cardData ? (cardData.example_latin || cardData.example || '') : '';
+        const exampleFa = cardData ? (cardData.example_fa || '') : '';
+        const pos = cardData ? (cardData.pos || '') : '';
+        const level = cardData ? (cardData.level || '') : '';
 
         $card.find('.card-front-word').text(word);
         $card.find('.card-back-meaning').text(meaning);
-        $card.find('.card-back-example').text(example);
+        $card.find('.card-front-example').text(exampleLatin);
+        $card.find('.card-back-example-fa').text(exampleFa);
+
+        const posEls = $card.find('.card-pos-badge');
+        const levelEls = $card.find('.card-level-badge');
+
+        if (pos) {
+            posEls.text(pos).show();
+        } else {
+            posEls.text('').hide();
+        }
+
+        if (level) {
+            levelEls.text(level).show();
+        } else {
+            levelEls.text('').hide();
+        }
         $card.removeClass('flipped swipe-out-left swipe-out-right swipe-in-from-left swipe-in-from-right');
     }
 
@@ -1094,6 +1186,10 @@ header('Content-Type: text/html; charset=utf-8');
         const $inactiveCard = getInactiveCardEl();
 
         fillCardContent($activeCard, card);
+
+        if (sessionState.stage === 'review') {
+            $('#session-buttons-study').hide();
+        }
 
         if (!$inactiveCard.hasClass('card-hidden')) {
             $inactiveCard.removeClass('card-visible').addClass('card-hidden');
@@ -1385,20 +1481,23 @@ header('Content-Type: text/html; charset=utf-8');
     });
 
     // --- جستجو / لیست همه لغات با صفحه‌بندی ---
-    function renderSearchTable(items) {
-		const tbody = $('#tbl-search-results tbody');
-		tbody.empty();
+        function renderSearchTable(items) {
+                const tbody = $('#tbl-search-results tbody');
+                tbody.empty();
 
-		items.forEach(function (item) {
-			const tr = $('<tr>');
+                items.forEach(function (item) {
+                        const tr = $('<tr>');
 
-			tr.append('<td>' + item.id + '</td>');
-			tr.append('<td>' + $('<div>').text(item.word).html() + '</td>');
-			tr.append('<td>' + $('<div>').text(item.meaning).html() + '</td>');
-			tr.append('<td class="ltr small">' + $('<div>').text(item.example || '').html() + '</td>');
-			tr.append('<td>' + item.box + '</td>');
-			tr.append('<td>' + item.status + '</td>');
-			tr.append('<td>' + (item.next_review || '') + '</td>');
+                        tr.append('<td>' + item.id + '</td>');
+                        tr.append('<td>' + $('<div>').text(item.word).html() + '</td>');
+                        tr.append('<td>' + $('<div>').text(item.pos || '').html() + '</td>');
+                        tr.append('<td>' + $('<div>').text(item.level || '').html() + '</td>');
+                        tr.append('<td>' + $('<div>').text(item.meaning).html() + '</td>');
+                        tr.append('<td class="ltr small">' + $('<div>').text(item.example_latin || item.example || '').html() + '</td>');
+                        tr.append('<td class="small">' + $('<div>').text(item.example_fa || '').html() + '</td>');
+                        tr.append('<td>' + item.box + '</td>');
+                        tr.append('<td>' + item.status + '</td>');
+                        tr.append('<td>' + (item.next_review || '') + '</td>');
 
 			// ستون عملیات
 			const tdActions = $('<td>');
@@ -1413,14 +1512,17 @@ header('Content-Type: text/html; charset=utf-8');
 					tab.show();
 				}
 
-				// پر کردن فرم با داده‌های رکورد
-				$('#edit-id').val(item.id);
-				$('input[name="word"]').val(item.word);
-				$('textarea[name="meaning"]').val(item.meaning || '');
-				$('textarea[name="example"]').val(item.example || '');
+                                  // پر کردن فرم با داده‌های رکورد
+                                  $('#edit-id').val(item.id);
+                                  $('input[name="word"]').val(item.word);
+                                  $('input[name="meaning"]').val(item.meaning || '');
+                                  $('textarea[name="example_latin"]').val(item.example_latin || item.example || '');
+                                  $('textarea[name="example_fa"]').val(item.example_fa || '');
+                                  $('input[name="pos"]').val(item.pos || '');
+                                  $('input[name="level"]').val(item.level || '');
 
-				// دکمه آپدیت را نشان بده
-				$('#btn-update-word').show();
+                                  // دکمه آپدیت را نشان بده
+                                  $('#btn-update-word').show();
 
 				// فوکوس روی لغت
 				$('input[name="word"]').focus().select();
