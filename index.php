@@ -500,6 +500,11 @@ header('Content-Type: text/html; charset=utf-8');
             padding: 1rem 1.2rem;
             border-radius: 0.75rem;
         }
+        .card-front-word {
+            background: #e9e9e9;
+            padding: 1rem 1.2rem;
+            border-radius: 0.75rem;
+        }
         .leitner-card.flipped .front {
             display: none;
         }
@@ -708,53 +713,52 @@ header('Content-Type: text/html; charset=utf-8');
                                 <div id="leitner-card-wrapper" class="leitner-card-wrapper mb-3">
                                         <div id="leitner-card-1" class="leitner-card card-visible">
                                                 <div class="front">
-                                                        <div class="d-flex justify-content-between align-items-start mb-2">
-                                                                <div class="card-front-word fw-bold"></div>
-                                                                <div class="card-meta text-muted small text-end">
-                                                                        <div class="card-pos-badge"></div>
-                                                                        <div class="card-level-badge"></div>
-                                                                </div>
-                                                        </div>
+                                                       
+														<div class="card-front-word fw-bold mb-2"></div>
+                                                        <div class="card-meta text-muted small text-end mb-2">
+															<div class="card-pos-badge"></div>
+															<div class="card-level-badge"></div>
+														</div>
                                                         <div class="card-front-example ltr small text-muted"></div>
+														
                                                 </div>
                                                 <div class="back">
-                                                        <div class="d-flex justify-content-between align-items-start mb-2">
-                                                                <div class="card-back-meaning"></div>
-                                                                <div class="card-meta text-muted small text-end">
+                                                         
+														<div class="card-back-meaning  mb-2"></div>
+                                                                <div class="card-meta text-muted small text-end mb-2">
                                                                         <div class="card-pos-badge"></div>
                                                                         <div class="card-level-badge"></div>
                                                                 </div>
-                                                        </div>
-                                                        <hr>
+                                                          
                                                         <div class="card-back-example-fa small"></div>
                                                 </div>
                                         </div>
                                         <div id="leitner-card-2" class="leitner-card card-hidden">
                                                 <div class="front">
-                                                        <div class="d-flex justify-content-between align-items-start mb-2">
-                                                                <div class="card-front-word fw-bold"></div>
-                                                                <div class="card-meta text-muted small text-end">
+                                                        
+                                                                <div class="card-front-word fw-bold mb-2"></div>
+                                                                <div class="card-meta text-muted small text-end mb-2">
                                                                         <div class="card-pos-badge"></div>
                                                                         <div class="card-level-badge"></div>
                                                                 </div>
-                                                        </div>
+                                                        
                                                         <div class="card-front-example ltr small text-muted"></div>
                                                 </div>
                                                 <div class="back">
-                                                        <div class="d-flex justify-content-between align-items-start mb-2">
-                                                                <div class="card-back-meaning"></div>
-                                                                <div class="card-meta text-muted small text-end">
+                                                         
+                                                                <div class="card-back-meaning mb-2"></div>
+                                                                <div class="card-meta text-muted small text-end mb-2">
                                                                         <div class="card-pos-badge"></div>
                                                                         <div class="card-level-badge"></div>
                                                                 </div>
-                                                        </div>
-                                                        <hr>
+                                                         
+                                                        
                                                         <div class="card-back-example-fa small"></div>
                                                 </div>
                                         </div>
                                 </div>
  
-				<div id="session-buttons-study" class="mb-3 d-flex justify-content-center gap-2 flex-wrap">
+				<div id="session-buttons-study" class="mb-3   justify-content-center gap-2 flex-wrap">
 					<button id="btn-prev-study" class="btn btn-outline-secondary big-btn" disabled>
 						لغت قبلی
 					</button>
