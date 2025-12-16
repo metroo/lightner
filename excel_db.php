@@ -20,18 +20,7 @@ function excel_init(): void
         $spreadsheet = new Spreadsheet();
         $sheet       = $spreadsheet->getActiveSheet();
 
-        $headers = [
-            'id',           // A
-            'word',         // B
-            'meaning',      // C
-            'example',      // D
-            'box',          // E  (0..7, 8 = long-term)
-            'status',       // F  (active, mastered, archived)
-            'created_at',   // G  (Y-m-d)
-            'last_review',  // H
-            'next_review',  // I
-            'lt_successes', // J  (0..4 برای حافظه بلندمدت)
-        ];
+        $headers = get_excel_headers();
 
         $col = 'A';
         foreach ($headers as $h) {
@@ -42,6 +31,62 @@ function excel_init(): void
         $writer = IOFactory::createWriter($spreadsheet, 'Xlsx');
         $writer->save(EXCEL_FILE);
     }
+}
+
+function get_excel_headers(): array
+{
+    return [
+        'id',            // A
+        'word',          // B
+        'meaning',       // C
+        'example_latin', // D (جمله لاتین)
+        'box',           // E  (0..7, 8 = long-term)
+        'status',        // F  (active, mastered, archived)
+        'created_at',    // G  (Y-m-d)
+        'last_review',   // H
+        'next_review',   // I
+        'lt_successes',  // J  (0..4 برای حافظه بلندمدت)
+        'example_fa',    // K (جمله فارسی)
+        'pos',           // L (نوع کلمه: صفت، قید و ...)
+        'level',         // M (سطح مثل A2,B1,...)
+    ];
+}
+
+function ensure_excel_headers($spreadsheet, $sheet): void
+{
+    $headers = get_excel_headers();
+    $highestRow = $sheet->getHighestDataRow();
+
+    // به‌روزرسانی عنوان ستون‌ها (در صورت قدیمی بودن)
+    $col = 'A';
+    foreach ($headers as $h) {
+        $current = (string) $sheet->getCell($col . '1')->getValue();
+        if ($current === '') {
+            $sheet->setCellValue($col . '1', $h);
+        } elseif ($col === 'D' && mb_strtolower($current, 'UTF-8') === 'example') {
+            // سازگاری با نسخه قدیمی
+            $sheet->setCellValue($col . '1', 'example_latin');
+        }
+        $col++;
+    }
+
+    // اگر ستون‌های جدید نبودند، مقدار خالی برای ردیف‌های موجود بنویس
+    $requiredCols = ['K', 'L', 'M'];
+    foreach ($requiredCols as $column) {
+        $headerVal = (string) $sheet->getCell($column . '1')->getValue();
+        if ($headerVal === '') {
+            $headerName = $headers[ord($column) - ord('A')];
+            $sheet->setCellValue($column . '1', $headerName);
+        }
+        for ($row = 2; $row <= $highestRow; $row++) {
+            $cell = $sheet->getCell($column . $row);
+            if ($cell->getValue() === null) {
+                $cell->setValue('');
+            }
+        }
+    }
+
+    excel_save($spreadsheet);
 }
 
 /**
@@ -94,6 +139,7 @@ function excel_load_all(): array
 
     $spreadsheet = IOFactory::load(EXCEL_FILE);
     $sheet       = $spreadsheet->getActiveSheet();
+    ensure_excel_headers($spreadsheet, $sheet);
 
     $rows        = [];
     $highestRow  = $sheet->getHighestDataRow();
@@ -109,13 +155,17 @@ function excel_load_all(): array
             'id'           => $id,
             'word'         => (string) $sheet->getCell("B{$row}")->getValue(),
             'meaning'      => (string) $sheet->getCell("C{$row}")->getValue(),
-            'example'      => (string) $sheet->getCell("D{$row}")->getValue(),
+            'example'      => (string) $sheet->getCell("D{$row}")->getValue(), // سازگاری با نسخه‌های قبلی
+            'example_latin'=> (string) $sheet->getCell("D{$row}")->getValue(),
             'box'          => (int) $sheet->getCell("E{$row}")->getValue(),
             'status'       => (string) ($sheet->getCell("F{$row}")->getValue() ?: 'active'),
             'created_at'   => (string) $sheet->getCell("G{$row}")->getValue(),
             'last_review'  => (string) $sheet->getCell("H{$row}")->getValue(),
             'next_review'  => (string) $sheet->getCell("I{$row}")->getValue(),
             'lt_successes' => (int) $sheet->getCell("J{$row}")->getValue(),
+            'example_fa'   => (string) $sheet->getCell("K{$row}")->getValue(),
+            'pos'          => (string) $sheet->getCell("L{$row}")->getValue(),
+            'level'        => (string) $sheet->getCell("M{$row}")->getValue(),
         ];
     }
 
@@ -142,7 +192,14 @@ function excel_find_by_word(string $word): ?array
     return null;
 }
 
-function excel_add_word(string $word, string $meaning, string $example = ''): void
+function excel_add_word(
+    string $word,
+    string $meaning,
+    string $exampleLatin = '',
+    string $exampleFa = '',
+    string $pos = '',
+    string $level = ''
+): void
 {
     [$spreadsheet, $sheet, $rows] = excel_load_all();
 
@@ -161,19 +218,30 @@ function excel_add_word(string $word, string $meaning, string $example = ''): vo
     $sheet->setCellValue("A{$nextRow}", $nextId);
     $sheet->setCellValue("B{$nextRow}", $word);
     $sheet->setCellValue("C{$nextRow}", $meaning);
-    $sheet->setCellValue("D{$nextRow}", $example);
+    $sheet->setCellValue("D{$nextRow}", $exampleLatin);
     $sheet->setCellValue("E{$nextRow}", 0);          // box 0 (جدید)
     $sheet->setCellValue("F{$nextRow}", 'active');   // فعال
     $sheet->setCellValue("G{$nextRow}", $today);
     $sheet->setCellValue("H{$nextRow}", '');
     $sheet->setCellValue("I{$nextRow}", '');
     $sheet->setCellValue("J{$nextRow}", 0);          // lt_successes
+    $sheet->setCellValue("K{$nextRow}", $exampleFa);
+    $sheet->setCellValue("L{$nextRow}", $pos);
+    $sheet->setCellValue("M{$nextRow}", $level);
 
     excel_save($spreadsheet);
 }
 
 /** ویرایش لغت موجود */
-function excel_update_word(int $id, string $word, string $meaning, string $example = ''): ?array
+function excel_update_word(
+    int $id,
+    string $word,
+    string $meaning,
+    string $exampleLatin = '',
+    string $exampleFa = '',
+    string $pos = '',
+    string $level = ''
+): ?array
 {
     [$spreadsheet, $sheet, $rows] = excel_load_all();
 
@@ -186,13 +254,20 @@ function excel_update_word(int $id, string $word, string $meaning, string $examp
 
         $sheet->setCellValue("B{$row}", $word);
         $sheet->setCellValue("C{$row}", $meaning);
-        $sheet->setCellValue("D{$row}", $example);
+        $sheet->setCellValue("D{$row}", $exampleLatin);
+        $sheet->setCellValue("K{$row}", $exampleFa);
+        $sheet->setCellValue("L{$row}", $pos);
+        $sheet->setCellValue("M{$row}", $level);
 
         excel_save($spreadsheet);
 
         $r['word']    = $word;
         $r['meaning'] = $meaning;
-        $r['example'] = $example;
+        $r['example'] = $exampleLatin;
+        $r['example_latin'] = $exampleLatin;
+        $r['example_fa'] = $exampleFa;
+        $r['pos'] = $pos;
+        $r['level'] = $level;
 
         return $r;
     }
@@ -240,7 +315,10 @@ function excel_import_from_file(string $tmpFilePath): int
     for ($row = 2; $row <= $highestRow; $row++) {
         $word    = trim((string) $importSheet->getCell("A{$row}")->getValue());
         $meaning = trim((string) $importSheet->getCell("B{$row}")->getValue());
-        $example = trim((string) $importSheet->getCell("C{$row}")->getValue());
+        $exampleLatin = trim((string) $importSheet->getCell("C{$row}")->getValue());
+        $exampleFa    = trim((string) $importSheet->getCell("D{$row}")->getValue());
+        $pos          = trim((string) $importSheet->getCell("E{$row}")->getValue());
+        $level        = trim((string) $importSheet->getCell("F{$row}")->getValue());
 
         // اگر لغت یا معنی خالی است، رد شو
         if ($word === '' || $meaning === '') {
@@ -263,13 +341,16 @@ function excel_import_from_file(string $tmpFilePath): int
         $mainSheet->setCellValue("A{$targetRow}", $maxId);
         $mainSheet->setCellValue("B{$targetRow}", $word);
         $mainSheet->setCellValue("C{$targetRow}", $meaning);
-        $mainSheet->setCellValue("D{$targetRow}", $example);
+        $mainSheet->setCellValue("D{$targetRow}", $exampleLatin);
         $mainSheet->setCellValue("E{$targetRow}", 0);          // box 0 (جدید)
         $mainSheet->setCellValue("F{$targetRow}", 'active');
         $mainSheet->setCellValue("G{$targetRow}", $today);
         $mainSheet->setCellValue("H{$targetRow}", '');
         $mainSheet->setCellValue("I{$targetRow}", '');
         $mainSheet->setCellValue("J{$targetRow}", 0);
+        $mainSheet->setCellValue("K{$targetRow}", $exampleFa);
+        $mainSheet->setCellValue("L{$targetRow}", $pos);
+        $mainSheet->setCellValue("M{$targetRow}", $level);
 
         $targetRow++;
         $inserted++;
@@ -456,7 +537,7 @@ function excel_search(string $query, ?string $status = null): array
         }
 
         $hay = mb_strtolower(
-            $r['word'] . ' ' . $r['meaning'] . ' ' . $r['example'],
+            $r['word'] . ' ' . $r['meaning'] . ' ' . ($r['example_latin'] ?? $r['example'] ?? '') . ' ' . ($r['example_fa'] ?? '') . ' ' . ($r['pos'] ?? '') . ' ' . ($r['level'] ?? ''),
             'UTF-8'
         );
         if (mb_strpos($hay, $query) !== false) {
